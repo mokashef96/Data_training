@@ -1,0 +1,2824 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syntax Grandmaster | ساحة التكتيك وهندسة البيانات بنظام الشطرنج</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo for Arabic, JetBrains Mono for Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        gm: {
+                            bg: '#0b0f19',
+                            panel: '#111827',
+                            card: '#161f33',
+                            border: '#24324b',
+                            brilliant: '#06b6d4', // !! Cyan
+                            best: '#10b981',      // ! Emerald
+                            inacc: '#f59e0b',     // ?! Amber
+                            blunder: '#ef4444',   // ?? Crimson
+                            gold: '#fbbf24',
+                            purple: '#8b5cf6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b0f19;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 45%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.07) 0px, transparent 45%),
+                linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        /* Chessboard subtle accent pattern */
+        .chess-header-pattern {
+            background-image: radial-gradient(rgba(251, 191, 36, 0.12) 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+
+        .code-dir {
+            direction: ltr;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .gm-glow-cyan {
+            box-shadow: 0 0 22px rgba(6, 182, 212, 0.18);
+            border: 1px solid rgba(6, 182, 212, 0.35);
+        }
+
+        .gm-glow-gold {
+            box-shadow: 0 0 22px rgba(251, 191, 36, 0.16);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+        }
+
+        .btn-tactical {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            top: 0;
+        }
+        .btn-tactical:active {
+            top: 2px;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .shake-anim {
+            animation: shake 0.35s ease-in-out;
+        }
+
+        @keyframes badgePop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.12); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .badge-pop {
+            animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-gm-brilliant selection:text-black">
+
+    <!-- Particle Confetti Canvas -->
+    <canvas id="particleCanvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-gray-900 border border-gm-brilliant text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid fa-chess-knight text-gm-brilliant text-xl"></i>
+        <span id="toastMsg" class="font-bold text-sm">تم الحفظ بنجاح!</span>
+    </div>
+
+    <!-- ==================== HEADER: GRANDMASTER HUD ==================== -->
+    <header class="border-b border-gray-800/90 bg-gray-950/85 backdrop-blur-md sticky top-0 z-40 chess-header-pattern">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <!-- Brand & Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-cyan-500 p-0.5 shadow-lg shadow-amber-500/20">
+                    <div class="w-full h-full bg-gray-950 rounded-[10px] flex items-center justify-center text-amber-400 text-2xl">
+                        <i class="fa-solid fa-chess-knight"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-black text-xl tracking-wide bg-gradient-to-r from-white via-amber-200 to-cyan-400 bg-clip-text text-transparent">
+                            SYNTAX GRANDMASTER
+                        </h1>
+                        <span class="text-[10px] font-mono uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                            Chess Tactical Edition
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-400">تكتيكات الـ Problem Solving، PySpark، SQL، والـ Analytics Engineering</p>
+                </div>
+            </div>
+
+            <!-- ELO Rating, Rank, Streak & Controls -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- ELO Rating Badge -->
+                <div class="flex items-center gap-3 bg-gray-900/95 border border-amber-500/30 px-4 py-1.5 rounded-xl shadow-inner">
+                    <div class="text-right">
+                        <div class="flex items-center gap-1.5">
+                            <span id="hudRankIcon" class="text-base">♞</span>
+                            <span id="hudRankTitle" class="text-xs font-bold text-amber-300">Knight (فارس التكتيك)</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-[10px] text-gray-400 uppercase font-mono">ELO RATING</span>
+                            <span id="hudEloDelta" class="text-[11px] font-mono font-bold text-emerald-400 hidden">+12</span>
+                        </div>
+                    </div>
+                    <div class="border-r border-gray-800 pr-3 text-center">
+                        <span id="hudEloValue" class="font-mono font-black text-2xl text-white tracking-tight">1200</span>
+                    </div>
+                </div>
+
+                <!-- Brilliant Moves & Streak Counter -->
+                <div class="hidden sm:flex items-center gap-3 bg-gray-900/90 border border-gray-800 px-3.5 py-1.5 rounded-xl">
+                    <div class="text-center" title="نقلات عبقرية (كتابة الكود من الذاكرة بدون مساعدة)">
+                        <span class="text-[10px] text-cyan-400 font-mono font-black block">!! BRILLIANT</span>
+                        <span id="hudBrilliantCount" class="font-mono font-bold text-white text-sm">0</span>
+                    </div>
+                    <div class="h-6 w-[1px] bg-gray-800"></div>
+                    <div class="text-center" title="أعلى سكور في Puzzle Rush">
+                        <span class="text-[10px] text-amber-400 font-mono font-bold block">⚡ RUSH BEST</span>
+                        <span id="hudRushBest" class="font-mono font-bold text-white text-sm">0</span>
+                    </div>
+                </div>
+
+                <!-- Utility Buttons -->
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleAudio()" class="w-10 h-10 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 flex items-center justify-center text-cyan-400 transition" title="تشغيل/كتم الصوت">
+                        <i id="audioIcon" class="fa-solid fa-volume-high"></i>
+                    </button>
+                    <button onclick="openGithubModal()" class="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 transition">
+                        <i class="fa-brands fa-github text-sm"></i>
+                        <span class="hidden md:inline">رفع على GitHub Pages</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="max-w-7xl w-full mx-auto px-4 py-5 flex-1 flex flex-col gap-5">
+
+        <!-- Top Mode & View Switcher -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-800/80 pb-4">
+            <!-- 5 Main Tabs: 4 Game Modes + 1 Vault -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="switchMode('tactics')" id="tab_tactics" class="mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-cyan-500 text-gray-950 shadow-lg shadow-cyan-500/20 transition">
+                    <i class="fa-solid fa-chess-F"></i>
+                    <i class="fa-solid fa-chess-board"></i>
+                    <span>التكتيك وحل المشكلات (Rated)</span>
+                </button>
+                <button onclick="switchMode('rush')" id="tab_rush" class="mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800 transition">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span>Puzzle Rush (3 دقائق)</span>
+                </button>
+                <button onclick="switchMode('mate3')" id="tab_mate3" class="mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800 transition">
+                    <i class="fa-solid fa-layer-group text-purple-400"></i>
+                    <span>كش مات في 3 (تركيب الكود)</span>
+                </button>
+                <button onclick="switchMode('interview')" id="tab_interview" class="mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-gray-900 text-amber-300 hover:bg-gray-800 border border-amber-500/40 transition">
+                    <i class="fa-solid fa-user-tie text-amber-400"></i>
+                    <span>وضع الإنترفيو (Boss Fight)</span>
+                </button>
+                <button onclick="switchMode('vault')" id="tab_vault" class="mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800 transition">
+                    <i class="fa-solid fa-book-bookmark text-red-400"></i>
+                    <span>دفتر البلندرات والمرجع</span>
+                    <span id="blunderCountBadge" class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full text-xs font-mono">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Topic Filter Bar (Visible in Tactics, Rush, Mate3, Vault) -->
+        <div id="topicFilterBar" class="flex flex-wrap items-center gap-1.5 bg-gray-900/60 border border-gray-800/80 p-2 rounded-2xl">
+            <span class="text-[11px] font-bold text-gray-400 px-2 flex items-center gap-1">
+                <i class="fa-solid fa-filter text-cyan-400"></i> افتتاحية اللعب:
+            </span>
+            <button onclick="selectTopic('all')" data-topic="all" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 transition">
+                🌐 كل التكتيكات (48)
+            </button>
+            <button onclick="selectTopic('pyspark')" data-topic="pyspark" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-orange-500/50 transition">
+                🔥 PySpark & Big Data
+            </button>
+            <button onclick="selectTopic('problem_solving')" data-topic="problem_solving" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-emerald-500/50 transition">
+                🧠 Problem Solving (Python)
+            </button>
+            <button onclick="selectTopic('sql')" data-topic="sql" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-blue-500/50 transition">
+                🗄️ SQL & BigQuery
+            </button>
+            <button onclick="selectTopic('pandas')" data-topic="pandas" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-purple-500/50 transition">
+                🐼 Pandas & NumPy
+            </button>
+            <button onclick="selectTopic('dbt_airflow')" data-topic="dbt_airflow" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-teal-500/50 transition">
+                ⚙️ dbt & Airflow
+            </button>
+            <button onclick="selectTopic('dax')" data-topic="dax" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-yellow-500/50 transition">
+                📊 Power BI & DAX
+            </button>
+            <button onclick="selectTopic('git_bash_viz')" data-topic="git_bash_viz" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-pink-500/50 transition">
+                💻 Git, Bash & Viz
+            </button>
+            <button onclick="selectTopic('blunders')" data-topic="blunders" class="topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-red-950/40 text-red-400 border border-red-500/40 hover:bg-red-900/40 transition">
+                📕 بلندراتي فقط (??)
+            </button>
+        </div>
+
+        <!-- ==================== VIEW 1: TACTICS / RUSH / MATE-IN-3 BOARD ==================== -->
+        <section id="viewBoard" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Left Column: Chess Tactical HUD & Rating Graph (4 cols) -->
+            <div class="lg:col-span-4 flex flex-col gap-5 order-2 lg:order-1">
+
+                <!-- ELO Rating Graph & Chess Evaluation Legend -->
+                <div class="bg-gm-panel border border-gray-800 rounded-2xl p-5 shadow-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-cyan-400"></i>
+                            منحنى تطور الـ ELO التكتيكي
+                        </h3>
+                        <span id="eloPeakText" class="text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Peak: 1200</span>
+                    </div>
+
+                    <!-- Mini SVG Sparkline -->
+                    <div class="bg-gray-950 border border-gray-800/80 rounded-xl p-3 mb-4">
+                        <svg id="eloSparkline" viewBox="0 0 260 65" class="w-full h-16 overflow-visible">
+                            <!-- Populated dynamically -->
+                        </svg>
+                    </div>
+
+                    <!-- Chess Move Evaluation Guide -->
+                    <div class="space-y-2 text-xs border-t border-gray-800/80 pt-3">
+                        <div class="text-[11px] font-bold text-gray-400 mb-2">نظام تقييم النقلات البرمجية:</div>
+                        <div class="flex items-center justify-between bg-cyan-950/30 border border-cyan-500/30 px-3 py-1.5 rounded-lg">
+                            <span class="font-bold text-cyan-300">كتابة الكود غيباً بالكيبورد</span>
+                            <span class="font-mono font-black text-cyan-400 bg-cyan-500/20 px-2 py-0.5 rounded">!! Brilliant (+8 ELO)</span>
+                        </div>
+                        <div class="flex items-center justify-between bg-emerald-950/25 border border-emerald-500/25 px-3 py-1.5 rounded-lg">
+                            <span class="text-emerald-300">حل من أول محاولة بالاختيارات</span>
+                            <span class="font-mono font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">! Best Move</span>
+                        </div>
+                        <div class="flex items-center justify-between bg-amber-950/25 border border-amber-500/25 px-3 py-1.5 rounded-lg">
+                            <span class="text-amber-300">حل بعد كشف تلميح (Hint)</span>
+                            <span class="font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded">?! Inaccuracy</span>
+                        </div>
+                        <div class="flex items-center justify-between bg-red-950/25 border border-red-500/25 px-3 py-1.5 rounded-lg">
+                            <span class="text-red-300">إجابة خاطئة (تُحفظ للمراجعة)</span>
+                            <span class="font-mono font-bold text-red-400 bg-red-500/20 px-2 py-0.5 rounded">?? Blunder</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mastery Breakdown by Topic -->
+                <div class="bg-gm-panel border border-gray-800 rounded-2xl p-5 shadow-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-bold text-gray-300 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-emerald-400"></i>
+                            إتقان التكتيكات حسب التخصص
+                        </h3>
+                        <span id="overallSolvedBadge" class="text-xs font-mono font-bold text-emerald-400">0 / 48</span>
+                    </div>
+                    <div id="topicMasteryBars" class="space-y-2.5 text-xs">
+                        <!-- Populated via JS -->
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-800 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>اختصارات: <kbd class="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded">Enter</kbd> تنفيذ • <kbd class="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded">H</kbd> تلميح</span>
+                        <button onclick="resetAllProgress()" class="text-red-400 hover:underline">تصفير الحساب</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: The Active Tactical Terminal (8 cols) -->
+            <div class="lg:col-span-8 order-1 lg:order-2">
+                <div id="tacticalBoardCard" class="bg-gm-panel gm-glow-cyan rounded-2xl overflow-hidden shadow-2xl transition-all duration-200">
+                    
+                    <!-- Puzzle Header Bar -->
+                    <div class="bg-gray-950/90 border-b border-gray-800 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Puzzle ELO Badge -->
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 font-mono text-xs font-black flex items-center gap-1.5">
+                                <i class="fa-solid fa-chess-pawn"></i>
+                                <span id="puzzleEloBadge">ELO 1450</span>
+                            </span>
+                            <!-- Topic Badge -->
+                            <span id="puzzleTopicBadge" class="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono text-xs font-bold">
+                                PYSPARK • BIG DATA
+                            </span>
+                            <!-- Tactical Motif Tag -->
+                            <span id="puzzleMotifBadge" class="px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-bold">
+                                🎯 تكتيك: Broadcast Join
+                            </span>
+                        </div>
+
+                        <!-- Right side of header: Rush HUD or Streak -->
+                        <div class="flex items-center gap-3">
+                            <!-- Puzzle Rush Lives & Timer (Shown only in Rush Mode) -->
+                            <div id="rushHudBox" class="hidden items-center gap-3 bg-gray-900 border border-amber-500/40 px-3 py-1 rounded-xl">
+                                <div id="rushLivesDisplay" class="flex items-center gap-1 text-red-500 text-sm">
+                                    <i class="fa-solid fa-heart"></i>
+                                    <i class="fa-solid fa-heart"></i>
+                                    <i class="fa-solid fa-heart"></i>
+                                </div>
+                                <div class="font-mono font-black text-amber-400 text-sm">
+                                    <i class="fa-regular fa-clock mr-1"></i><span id="rushTimerDisplay">03:00</span>
+                                </div>
+                                <div class="font-mono font-black text-white text-sm bg-amber-500/20 px-2 rounded">
+                                    Score: <span id="rushScoreDisplay">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Normal Streak Counter -->
+                            <div id="normalStreakBox" class="flex items-center gap-1.5 bg-gray-900 border border-gray-800 px-3 py-1 rounded-xl text-xs font-mono">
+                                <i class="fa-solid fa-fire text-orange-500"></i>
+                                <span class="text-gray-400">STREAK</span>
+                                <span id="boardStreakVal" class="font-black text-amber-400 text-sm">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Tactical Problem Area -->
+                    <div class="p-6 sm:p-7 flex flex-col gap-5">
+
+                        <!-- Problem Statement + Bookmark -->
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="space-y-1.5">
+                                <div id="puzzleTypeBanner" class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-crosshairs"></i>
+                                    <span>العب النقلة الأفضل (اكتب الـ Syntax مباشرة للحصول على !! Brilliant أو اختر من الكبسولات):</span>
+                                </div>
+                                <h2 id="puzzleScenarioText" class="text-base sm:text-lg font-bold text-white leading-relaxed">
+                                    جاري تجهيز الرقعة التكتيكية...
+                                </h2>
+                            </div>
+
+                            <button onclick="toggleBlunderBookmark()" id="btnBlunderBookmark" class="p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-red-400 hover:border-red-500/40 transition shrink-0" title="إضافة/إزالة من دفتر البلندرات للمراجعة">
+                                <i class="fa-regular fa-bookmark"></i>
+                            </button>
+                        </div>
+
+                        <!-- Data Input / Output State Preview (Problem Solving Context) -->
+                        <div class="bg-gray-950/90 border border-gray-800/90 rounded-xl p-3.5">
+                            <div class="flex items-center justify-between text-[11px] text-gray-400 mb-1.5">
+                                <span class="font-bold flex items-center gap-1.5 text-emerald-400">
+                                    <i class="fa-solid fa-table-columns"></i> معاينة حالة البيانات (Input ➔ Expected Output / Trace):
+                                </span>
+                                <span class="font-mono text-[10px] text-gray-500">DATA STATE</span>
+                            </div>
+                            <pre id="puzzleIoPreview" class="code-dir text-xs text-emerald-300/90 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed"></pre>
+                        </div>
+
+                        <!-- Code Editor Terminal (Shown in Fill & Blunder modes) -->
+                        <div id="codeTerminalBox" class="relative rounded-xl bg-[#070a12] border-2 border-gray-800 p-5 overflow-x-auto shadow-inner">
+                            <div class="flex items-center justify-between border-b border-gray-800/80 pb-2 mb-3">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500/70"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500/70"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/70"></span>
+                                    <span class="ml-2 font-mono text-[11px] text-gray-400" id="terminalFileName">solution_pipeline.py</span>
+                                </div>
+                                <button onclick="triggerHint()" id="btnHint" class="text-xs font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition">
+                                    <i class="fa-regular fa-lightbulb"></i>
+                                    <span>تلميح تكتيكي (H)</span>
+                                </button>
+                            </div>
+                            <pre id="puzzleCodeDisplay" class="code-dir text-sm sm:text-base text-gray-100 leading-relaxed whitespace-pre-wrap break-words"></pre>
+                        </div>
+
+                        <!-- Hint Box (Hidden until requested) -->
+                        <div id="hintBanner" class="hidden bg-amber-950/30 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-200 flex items-center gap-2.5">
+                            <i class="fa-solid fa-chess-bishop text-amber-400 text-base"></i>
+                            <span id="hintTextContent"></span>
+                        </div>
+
+                        <!-- INTERACTION AREA A: TACTICS & RUSH (Direct Input + Tactical Chips) -->
+                        <div id="interactionStandard" class="flex flex-col gap-4">
+                            <!-- Direct Type Input for !! Brilliant Move -->
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <div class="relative flex-1">
+                                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-cyan-400 font-black text-sm">!!&gt;</span>
+                                    <input type="text" id="userCodeInput" autocomplete="off" spellcheck="false"
+                                        placeholder="اكتب الكود هنا غيباً للحصول على نقلة عبقرية (!! Brilliant)..."
+                                        class="w-full code-dir pl-12 pr-4 py-3.5 rounded-xl bg-gray-950 border-2 border-gray-700 focus:border-cyan-400 focus:outline-none text-white font-mono text-sm sm:text-base shadow-inner transition">
+                                </div>
+                                <button onclick="submitTypedMove()" class="btn-tactical px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-gray-950 font-black text-sm shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 shrink-0">
+                                    <span>تنفيذ النقلة (Enter)</span>
+                                    <i class="fa-solid fa-chess-knight"></i>
+                                </button>
+                            </div>
+
+                            <!-- Tactical Option Chips (For ! Best Move) -->
+                            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                                <div class="flex items-center justify-between text-xs text-gray-400 mb-3">
+                                    <span>🎯 أو اختر النقلة الصحيحة مباشرة (أزرار الكيبورد <kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">1</kbd> - <kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">4</kbd>):</span>
+                                    <span class="text-[11px] text-emerald-400 font-mono">! Best Move</span>
+                                </div>
+                                <div id="optionsGrid" class="code-dir grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    <!-- 4 Tactical Option Buttons -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- INTERACTION AREA B: MATE IN 3 (Multi-Step Pipeline Ordering) -->
+                        <div id="interactionMate3" class="hidden flex-col gap-4">
+                            <div class="bg-[#070a12] border-2 border-dashed border-purple-500/40 rounded-xl p-4 min-h-[90px] flex flex-col justify-between">
+                                <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+                                    <span class="font-bold text-purple-300">♟️ تسلسل خطوات الـ Pipeline للوصول إلى Checkmate (اضغط على الخطوة لإرجاعها):</span>
+                                    <button onclick="resetMate3Order()" class="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+                                        <i class="fa-solid fa-rotate-left"></i> إعادة ترتيب
+                                    </button>
+                                </div>
+                                <div id="mate3TargetZone" class="code-dir flex flex-col gap-2 min-h-[48px]">
+                                    <!-- Ordered steps -->
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-900/70 border border-gray-800 rounded-xl p-4">
+                                <div class="text-xs text-gray-400 mb-3">اضغط على السطور البرمجية بالترتيب المنطقي الصحيح للتنفيذ:</div>
+                                <div id="mate3SourceZone" class="code-dir flex flex-wrap gap-2">
+                                    <!-- Scrambled steps -->
+                                </div>
+                            </div>
+
+                            <button onclick="submitMate3Move()" class="btn-tactical w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-cyan-500 text-gray-950 font-black text-sm shadow-lg">
+                                إعلان كش مات (تنفيذ الـ Pipeline) <i class="fa-solid fa-chess-king mr-1"></i>
+                            </button>
+                        </div>
+
+                        <!-- CHESS EVALUATION FEEDBACK DRAWER -->
+                        <div id="evalDrawer" class="hidden rounded-2xl border-2 p-5 transition-all">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div class="flex items-start gap-4">
+                                    <!-- Chess Symbol Badge (!!, !, ?!, ??) -->
+                                    <div id="evalSymbolCircle" class="w-14 h-14 rounded-2xl flex items-center justify-center font-mono font-black text-2xl shrink-0 shadow-lg badge-pop">
+                                        !!
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <h4 id="evalTitleText" class="font-black text-lg">نقلة عبقرية (Brilliant Move)!</h4>
+                                            <span id="evalEloChangeBadge" class="font-mono text-xs font-black px-2.5 py-0.5 rounded-full bg-black/40">
+                                                +20 ELO
+                                            </span>
+                                        </div>
+                                        <div id="evalCorrectCodeBox" class="code-dir font-mono text-xs sm:text-sm text-cyan-300 bg-black/50 px-3 py-1.5 rounded-lg border border-gray-800 inline-block"></div>
+                                        <p id="evalExplanationText" class="text-xs sm:text-sm text-gray-200 leading-relaxed pt-1"></p>
+                                    </div>
+                                </div>
+
+                                <button onclick="nextPuzzle()" id="btnNextPuzzle" class="btn-tactical px-6 py-3.5 rounded-xl bg-white hover:bg-cyan-400 text-gray-950 font-black text-sm transition shrink-0 flex items-center justify-center gap-2 shadow-lg">
+                                    <span>التكتيك التالي</span>
+                                    <i class="fa-solid fa-arrow-left"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 2: TECHNICAL INTERVIEW BOSS FIGHT ==================== -->
+        <section id="viewInterview" class="hidden flex-col gap-6">
+            <!-- Interview Track Selection Lobby -->
+            <div id="interviewLobby" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="md:col-span-2 bg-gradient-to-r from-amber-500/15 via-gray-900 to-cyan-500/15 border border-amber-500/30 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-mono uppercase bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full font-bold">
+                            👔 Technical Interview Simulator
+                        </span>
+                        <h2 class="text-2xl font-black text-white mt-2">محاكي الإنترفيو التقني (Boss Fight)</h2>
+                        <p class="text-sm text-gray-300 mt-1">
+                            اختر المسمى الوظيفي وادخل مقابلة عمل مكونة من 4 مراحل مترابطة مع مؤقت زمني وتقرير تقييم نهائي (Strong Hire / Hire).
+                        </p>
+                    </div>
+                    <div class="bg-gray-950/90 border border-gray-800 px-4 py-3 rounded-xl text-center shrink-0">
+                        <span class="text-xs text-gray-400 block">إنترفيوهات اجتزتها</span>
+                        <span id="interviewsPassedCount" class="font-mono font-black text-2xl text-emerald-400">0 / 4</span>
+                    </div>
+                </div>
+
+                <!-- 4 Interview Track Cards dynamically rendered -->
+                <div id="interviewTracksGrid" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+            </div>
+
+            <!-- Active Interview Arena (Hidden until an interview starts) -->
+            <div id="interviewActiveStage" class="hidden flex-col gap-5">
+                <!-- Interview Top Progress & Persona Bar -->
+                <div class="bg-gm-panel gm-glow-gold rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 id="ivTitleHeader" class="font-black text-base text-white">Senior Analytics Engineer Interview</h3>
+                                <span id="ivStageCounter" class="text-xs font-mono font-bold bg-amber-500 text-gray-950 px-2.5 py-0.5 rounded-full">
+                                    Stage 1 / 4
+                                </span>
+                            </div>
+                            <p id="ivInterviewerPrompt" class="text-xs text-gray-300 mt-0.5">
+                                المحاور التقني يختبر قدرتك على كتابة كود نظيف وفعّال تحت الضغط...
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="bg-gray-950 border border-gray-800 px-4 py-2 rounded-xl font-mono text-sm font-bold text-amber-400 flex items-center gap-2">
+                            <i class="fa-regular fa-clock"></i>
+                            <span id="ivStageTimer">01:30</span>
+                        </div>
+                        <button onclick="quitInterviewToLobby()" class="px-3 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-gray-400 text-xs font-bold border border-gray-800">
+                            انسحاب
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interview Question Body -->
+                <div class="bg-gm-panel border border-gray-800 rounded-2xl p-6 flex flex-col gap-5">
+                    <div class="space-y-2">
+                        <span id="ivStageTopicBadge" class="text-xs font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded">STAGE 1</span>
+                        <h3 id="ivQuestionScenario" class="text-lg font-bold text-white leading-relaxed"></h3>
+                    </div>
+
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-3.5">
+                        <div class="text-[11px] text-emerald-400 font-bold mb-1">بيئة الإنتاج والبيانات (System Context):</div>
+                        <pre id="ivIoPreview" class="code-dir text-xs text-emerald-300 font-mono overflow-x-auto whitespace-pre-wrap"></pre>
+                    </div>
+
+                    <div class="bg-[#070a12] border-2 border-gray-800 rounded-xl p-5">
+                        <pre id="ivCodeTemplate" class="code-dir text-sm sm:text-base text-gray-100 leading-relaxed whitespace-pre-wrap"></pre>
+                    </div>
+
+                    <!-- Interview Answer Input & Options -->
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="ivUserInput" autocomplete="off" spellcheck="false"
+                            placeholder="اكتب إجابتك البرمجية هنا أو اختر من الخيارات بالأسفل..."
+                            class="flex-1 code-dir px-4 py-3.5 rounded-xl bg-gray-950 border-2 border-gray-700 focus:border-amber-400 focus:outline-none text-white font-mono text-sm">
+                        <button onclick="submitInterviewStageTyped()" class="btn-tactical px-6 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-gray-950 font-black text-sm">
+                            تأكيد الإجابة للجنة الإنترفيو
+                        </button>
+                    </div>
+
+                    <div id="ivOptionsGrid" class="code-dir grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                </div>
+            </div>
+
+            <!-- Interview Final Report Card -->
+            <div id="interviewReportCard" class="hidden bg-gm-panel gm-glow-gold rounded-2xl p-6 sm:p-8 flex-col gap-6">
+                <!-- Populated on interview completion -->
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 3: BLUNDER BOOK & SYNTAX VAULT ==================== -->
+        <section id="viewVault" class="hidden flex-col gap-5">
+            <div class="bg-gm-panel border border-gray-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-book-open-reader text-red-400"></i>
+                            دفتر البلندرات (?? Blunder Book) ومرجع الأكواد الكامل
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-1">
+                            مثل لاعبي الشطرنج المحترفين، مراجعة بلندراتك وأخطائك السابقة هي أسرع طريقة للوصول إلى 2000+ ELO!
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                            <input type="text" id="vaultSearchInput" oninput="renderVault()" placeholder="ابحث عن broadcast, QUALIFY, heapq, CALCULATE..."
+                                class="pr-9 pl-4 py-2 rounded-xl bg-gray-950 border border-gray-800 text-xs text-white focus:border-cyan-400 focus:outline-none w-64">
+                        </div>
+
+                        <select id="vaultFilterSelect" onchange="renderVault()" class="px-3 py-2 rounded-xl bg-gray-950 border border-gray-800 text-xs text-gray-200 focus:border-cyan-400 focus:outline-none">
+                            <option value="all">جميع التكتيكات (48)</option>
+                            <option value="blunders">📕 دفتر البلندرات فقط (?? Blunders)</option>
+                            <option value="solved">✅ تكتيكات تم إتقانها</option>
+                            <option value="unsolved">🆕 تكتيكات لم تحلها بعد</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="vaultCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL 1: PUZZLE RUSH SUMMARY ==================== -->
+    <div id="rushSummaryModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-gm-panel gm-glow-gold rounded-2xl max-w-md w-full p-6 text-center space-y-5">
+            <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-3xl">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-black text-white">انتهت جولة Puzzle Rush!</h3>
+                <p id="rushEndReason" class="text-xs text-gray-400 mt-1">أداء تكتيكي سريع على الرقعة</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800">
+                <div>
+                    <span class="text-xs text-gray-400 block">نقاط الجولة</span>
+                    <span id="rushModalScore" class="text-3xl font-mono font-black text-cyan-400">0</span>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-400 block">أعلى رقم قياسي</span>
+                    <span id="rushModalBest" class="text-3xl font-mono font-black text-amber-400">0</span>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="restartPuzzleRush()" class="flex-1 py-3 rounded-xl bg-amber-400 text-gray-950 font-black text-sm">
+                    جولة Rush جديدة ⚡
+                </button>
+                <button onclick="closeRushModalToTactics()" class="flex-1 py-3 rounded-xl bg-gray-800 text-white font-bold text-sm">
+                    العودة للتكتيك
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: GITHUB PAGES DEPLOYMENT & EXPORT ==================== -->
+    <div id="githubModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-gm-panel gm-glow-cyan rounded-2xl max-w-lg w-full p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i class="fa-brands fa-github text-emerald-400 text-xl"></i>
+                    رفع اللعبة على GitHub Pages في 30 ثانية
+                </h3>
+                <button onclick="closeGithubModal()" class="text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <ol class="text-xs sm:text-sm text-gray-300 space-y-3 list-decimal list-inside leading-relaxed">
+                <li>اضغط على زر <strong>"تحميل ملف index.html"</strong> بالأسفل لحفظ النسخة الكاملة على جهازك.</li>
+                <li>أنشئ Repository جديد على حسابك في GitHub (مثلاً باسم <code class="text-cyan-300 font-mono">syntax-grandmaster</code>).</li>
+                <li>ارفع ملف <code class="text-cyan-300 font-mono">index.html</code> داخل الـ Repository.</li>
+                <li>ادخل على <strong>Settings ➔ Pages</strong> واختر الفرع <code class="text-emerald-300 font-mono">main</code> ثم اضغط <strong>Save</strong>.</li>
+                <li>ستحصل على رابط دائم تفتحه من الموبايل أو اللابتوب في أي وقت بديلاً للشطرنج!</li>
+            </ol>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="downloadStandaloneHTML()" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-gray-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-download"></i>
+                    <span>تحميل ملف index.html الجاهز</span>
+                </button>
+                <button onclick="closeGithubModal()" class="px-5 py-3.5 rounded-xl bg-gray-800 text-gray-300 font-bold text-sm">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-900 bg-gray-950/70 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-2">
+            <div>♟️ <strong>Syntax Grandmaster</strong> — صُممت لتحويل حفظ الـ Syntax والـ Problem Solving إلى متعة تكتيكية مثل الشطرنج.</div>
+            <div class="font-mono">Shortcuts: <kbd class="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded">Enter</kbd> Submit/Next • <kbd class="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded">1-4</kbd> Options • <kbd class="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded">H</kbd> Hint</div>
+        </div>
+    </footer>
+
+    <!-- ==================== GRANDMASTER ENGINE & 48 PUZZLE BANK ==================== -->
+    <script>
+        /*************************************************************************
+         * 1. COMPREHENSIVE TACTICAL PUZZLE BANK (48 PUZZLES ACROSS 8 DOMAINS)
+         *************************************************************************/
+        const PUZZLE_BANK = [
+            // ==================== 🔥 PYSPARK & BIG DATA (8 Puzzles) ====================
+            {
+                id: "spk_1",
+                topic: "pyspark",
+                badge: "PYSPARK • OPTIMIZATION",
+                elo: 1450,
+                motif: "تكتيك: Broadcast Hash Join",
+                type: "fill",
+                scenario: "لديك جدول حركات ضخم `fact_tx` (مليار صف) وجدول دول صغير `dim_country` (200 صف). كيف نُجبر Spark على إرسال الجدول الصغير لكل الـ Executors لتجنب عملية الـ Shuffle المكلفة؟",
+                ioPreview: "fact_tx (1B rows) ⋈ dim_country (200 rows) ➔ Zero Shuffle BroadcastExchange",
+                codeTemplate: "from pyspark.sql import functions as F\ndf_joined = fact_tx.join(F.___(dim_country), on='country_id', how='left')",
+                answer: "broadcast",
+                acceptedAnswers: ["broadcast", "F.broadcast"],
+                options: ["broadcast", "spark_partition", "cache", "persist"],
+                orderTokens: ["df_joined =", "fact_tx.join(", "F.broadcast(dim_country),", "on='country_id', how='left')"],
+                hint: "دالة في pyspark.sql.functions تذيع الجدول الصغير لكل العقد.",
+                explanation: "استخدام F.broadcast(small_df) يلغي الحاجة لعمل SortMergeJoin و Shuffle للجدول الضخم، مما يسرع الـ Pipeline عشرات المرات."
+            },
+            {
+                id: "spk_2",
+                topic: "pyspark",
+                badge: "PYSPARK • TRANSFORMATIONS",
+                elo: 1320,
+                motif: "تكتيك: Conditional Column",
+                type: "fill",
+                scenario: "في PySpark، نريد إنشاء عمود `risk_flag` يكون 'High' إذا كانت `amount > 10000` وإلا 'Normal'. ما هي الدالة المكافئة لـ ELSE في نهاية سلسلة `F.when()`؟",
+                ioPreview: "amount: 15000 ➔ risk_flag: 'High' | amount: 400 ➔ risk_flag: 'Normal'",
+                codeTemplate: "df = df.withColumn('risk_flag', F.when(F.col('amount') > 10000, 'High').___('Normal'))",
+                answer: "otherwise",
+                acceptedAnswers: ["otherwise", ".otherwise"],
+                options: ["otherwise", "else_", "default", "fillna"],
+                orderTokens: ["df.withColumn('risk_flag',", "F.when(F.col('amount') > 10000, 'High')", ".otherwise('Normal')", ")"],
+                hint: "تُكتب بعد F.when(...) لتحديد القيمة الافتراضية.",
+                explanation: "في PySpark نستعمل F.when(condition, val).otherwise(default_val). نسيان otherwise يجعل القيم غير المطابقة تتحول إلى null."
+            },
+            {
+                id: "spk_3",
+                topic: "pyspark",
+                badge: "PYSPARK • WINDOWING",
+                elo: 1540,
+                motif: "تكتيك: Deduplication Window",
+                type: "fill",
+                scenario: "تريد الاحتفاظ بآخر حالة فقط لكل طلب `order_id` بناءً على `updated_at` تنازلياً في PySpark باستخدام Window:",
+                ioPreview: "order_id=10 (10:00, 10:05) ➔ Keep 10:05 (rn == 1)",
+                codeTemplate: "from pyspark.sql.window import Window\nw = Window.___('order_id').orderBy(F.col('updated_at').desc())\ndf_latest = df.withColumn('rn', F.row_number().over(w)).filter(F.col('rn') == 1)",
+                answer: "partitionBy",
+                acceptedAnswers: ["partitionBy"],
+                options: ["partitionBy", "groupBy", "distributeBy", "repartition"],
+                orderTokens: ["w = Window.partitionBy('order_id')", ".orderBy(F.col('updated_at').desc())", "df.withColumn('rn', F.row_number().over(w))", ".filter(F.col('rn') == 1)"],
+                hint: "تُقسم النافذة حسب مفتاح المجموعة في كائن Window.",
+                explanation: "Window.partitionBy('order_id') هي المقابل المباشر لـ PARTITION BY في SQL داخل PySpark."
+            },
+            {
+                id: "spk_4",
+                topic: "pyspark",
+                badge: "PYSPARK • PARTITIONS",
+                elo: 1620,
+                motif: "تكتيك: تقليل الـ Partitions بدون Shuffle",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر (Spot the Blunder): قبل حفظ الملف النهائي في S3، أراد مهندس البيانات تقليل عدد الـ Partitions من 500 إلى 10 بدون إحداث Full Shuffle، لكنه كتب `df.repartition(10)`. ما الدالة الأصح والأسرع لتقليل الـ Partitions فقط؟",
+                ioPreview: "500 partitions ➔ 10 partitions (Narrow Transformation, No Shuffle)",
+                codeTemplate: "# ❌ Blunder (causes full network shuffle):\n# df.repartition(10).write.parquet('s3://bucket/out')\n\n# ✅ Best Move:\ndf.___(10).write.parquet('s3://bucket/out')",
+                answer: "coalesce",
+                acceptedAnswers: ["coalesce"],
+                options: ["coalesce", "repartitionByRange", "compact", "bucketBy"],
+                orderTokens: ["df", ".coalesce(10)", ".write", ".parquet('s3://bucket/out')"],
+                hint: "تدمج الـ Partitions الموجودة على نفس الـ Executor دون نقل البيانات عبر الشبكة.",
+                explanation: "دالة coalesce(n) تستخدم Narrow Transformation لدمج الـ Partitions بدون Shuffle، بينما repartition(n) تقوم بعمل Full Shuffle كامل."
+            },
+            {
+                id: "spk_5",
+                topic: "pyspark",
+                badge: "PYSPARK • NESTED ARRAYS",
+                elo: 1480,
+                motif: "تكتيك: تفتيت المصفوفات (Flattening)",
+                type: "fill",
+                scenario: "لديك عمود `items` يحتوي على مصفوفة منتجات `['A', 'B']` لكل فاتورة، وتريد تحويل كل عنصر في المصفوفة إلى صف مستقل:",
+                ioPreview: "order_1, ['A', 'B'] ➔ (order_1, 'A'), (order_1, 'B')",
+                codeTemplate: "df_flat = df.withColumn('item', F.___(F.col('items')))",
+                answer: "explode",
+                acceptedAnswers: ["explode", "F.explode"],
+                options: ["explode", "flatten", "unnest", "split"],
+                orderTokens: ["df.withColumn(", "'item',", "F.explode(F.col('items'))", ")"],
+                hint: "نفس اسم الدالة في Pandas لتحويل عناصر القائمة لصفوف.",
+                explanation: "F.explode() تحول كل عنصر داخل Array أو Map إلى صف منفصل. وإذا أردت الاحتفاظ بالصفوف ذات المصفوفات الفارغة استخدم F.explode_outer()."
+            },
+            {
+                id: "spk_6",
+                topic: "pyspark",
+                badge: "PYSPARK • AGGREGATIONS",
+                elo: 1380,
+                motif: "تكتيك: تجميع متعدد مع تسمية الأعمدة",
+                type: "fill",
+                scenario: "بعد عمل `groupBy('store_id')` في PySpark، نريد حساب مجموع المبيعات ومتوسط التقييم في نفس الخطوة:",
+                ioPreview: "store_id ➔ total_rev, avg_rating",
+                codeTemplate: "df_summary = df.groupBy('store_id').___(\n    F.sum('revenue').alias('total_rev'),\n    F.avg('rating').alias('avg_rating')\n)",
+                answer: "agg",
+                acceptedAnswers: ["agg"],
+                options: ["agg", "apply", "select", "summarize"],
+                orderTokens: ["df.groupBy('store_id')", ".agg(", "F.sum('revenue').alias('total_rev'),", "F.avg('rating').alias('avg_rating'))"],
+                hint: "اختصار لكلمة Aggregate.",
+                explanation: "في PySpark نمرر دوال التجميع داخل `.agg(...)` مع استخدام `.alias()` لتسمية الأعمدة الناتجة بوضوح."
+            },
+            {
+                id: "spk_7",
+                topic: "pyspark",
+                badge: "PYSPARK • MEMORY SAFETY",
+                elo: 1750,
+                motif: "تكتيك: إنقاذ الـ Driver من OOM",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر: الكود التالي يسحب 100 مليون صف إلى ذاكرة الـ Driver Node مباشرة عبر `collect()` لأخذ أول 5 صفوف فقط مما يسبب Crash فوري! بماذا نستبدل `collect()[:5]`؟",
+                ioPreview: "100M rows on Executors ➔ Fetch only 5 rows safely to Driver",
+                codeTemplate: "# ❌ Blunder (Driver OutOfMemoryError):\n# sample_rows = big_df.collect()[:5]\n\n# ✅ Best Move:\nsample_rows = big_df.___(5)",
+                answer: "take",
+                acceptedAnswers: ["take", " head", "head"],
+                options: ["take", "collectAsList", "toLocalIterator", " persist"],
+                orderTokens: ["sample_rows =", "big_df.filter(F.col('active') == True)", ".take(5)"],
+                hint: "دالة في PySpark تسحب عدد N من الصفوف فقط للـ Driver.",
+                explanation: "استدعاء collect() يجلب كامل الـ DataFrame لذاكرة الـ Driver. بينما take(5) أو limit(5).collect() يجلب 5 صفوف فقط بأمان."
+            },
+            {
+                id: "spk_8",
+                topic: "pyspark",
+                badge: "PYSPARK • SPARK 3+ AQE",
+                elo: 1850,
+                motif: "تكتيك: Adaptive Query Execution",
+                type: "fill",
+                scenario: "في Spark 3+، ما هي الخاصية التي نفعلها لكي يقوم Spark تلقائياً بدمج الـ Shuffle Partitions الصغيرة ومعالجة الـ Data Skew وقت التشغيل؟",
+                ioPreview: "Runtime skewed join ➔ Auto-split skewed partitions",
+                codeTemplate: "spark.conf.set('spark.sql.___.enabled', 'true')",
+                answer: "adaptive",
+                acceptedAnswers: ["adaptive"],
+                options: ["adaptive", "dynamic", "autoSkew", "vectorized"],
+                orderTokens: ["spark.conf.set(", "'spark.sql.adaptive.enabled',", "'true'", ")"],
+                hint: "تُعرف اختصاراً بـ AQE (Adaptive Query Execution).",
+                explanation: "خاصية spark.sql.adaptive.enabled تفعل الـ AQE الذي يضبط خطة التنفيذ ديناميكياً بناءً على إحصائيات البيانات الحقيقية أثناء الـ Shuffle."
+            },
+
+            // ==================== 🧠 PROBLEM SOLVING - PYTHON (8 Puzzles) ====================
+            {
+                id: "ps_1",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • HASH MAP",
+                elo: 1250,
+                motif: "تكتيك: Frequency Counting O(N)",
+                type: "fill",
+                scenario: "لديك قائمة ملايين الـ `event_types` وتريد إيجاد أكثر 3 أحداث تكراراً في تعقيد زمني ممتاز بدلاً من كتابة حلقات متداخلة:",
+                ioPreview: "['click', 'view', 'click', 'buy', 'click'] ➔ [('click', 3), ('view', 1), ('buy', 1)]",
+                codeTemplate: "from collections import Counter\ntop_3 = Counter(events).___(3)",
+                answer: "most_common",
+                acceptedAnswers: ["most_common"],
+                options: ["most_common", "top_k", "nlargest", "sort_values"],
+                orderTokens: ["from collections import Counter", "counts = Counter(events)", "top_3 = counts.most_common(3)"],
+                hint: "دالة مدمجة داخل كلاس Counter ترجع أعلى K عناصر.",
+                explanation: "Counter(events).most_common(k) تستخدم Heap داخلياً عندما تكون k صغيرة، مما يجعلها أسرع بكثير من فرز القائمة بالكامل."
+            },
+            {
+                id: "ps_2",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • GROUPING",
+                elo: 1350,
+                motif: "تكتيك: قاموس بدون KeyError",
+                type: "fill",
+                scenario: "نريد تجميع `order_id` لكل `user_id` في قاموس قوائم بدون فحص `if user not in dict` في كل دورة:",
+                ioPreview: "[('u1', 101), ('u1', 102)] ➔ {'u1': [101, 102]}",
+                codeTemplate: "from collections import ___\nuser_orders = ___(list)\nfor u, order_id in records:\n    user_orders[u].append(order_id)",
+                answer: "defaultdict",
+                acceptedAnswers: ["defaultdict"],
+                options: ["defaultdict", "OrderedDict", "ChainMap", "AutoDict"],
+                orderTokens: ["from collections import defaultdict", "user_orders = defaultdict(list)", "for u, oid in records:", "    user_orders[u].append(oid)"],
+                hint: "نوع قاموس في مكتبة collections ينشئ قائمة فارغة تلقائياً لأي مفتاح جديد.",
+                explanation: "defaultdict(list) ينشئ تلقائياً قائمة فارغة عند الوصول لمفتاح غير موجود، مما يجعل كود الـ Grouping أنظف وأسرع."
+            },
+            {
+                id: "ps_3",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • HEAPS",
+                elo: 1580,
+                motif: "تكتيك: Top-K Streaming in O(N log K)",
+                type: "fill",
+                scenario: "لديك Stream يحتوي على 50 مليون عملية مالية وتريد استخراج أكبر 5 عمليات فقط دون فرز القائمة بالكامل في الذاكرة (تجنب O(N log N)):",
+                ioPreview: "50M transactions ➔ Top 5 largest in O(N log 5) time & O(5) memory",
+                codeTemplate: "import heapq\ntop_5_tx = heapq.___(5, transactions, key=lambda x: x['amount'])",
+                answer: "nlargest",
+                acceptedAnswers: ["nlargest"],
+                options: ["nlargest", "heappop", "max_k", "topk"],
+                orderTokens: ["import heapq", "top_5_tx = heapq.nlargest(", "5, transactions,", "key=lambda x: x['amount'])"],
+                hint: "دالة في موديول heapq تجلب أكبر N عناصر.",
+                explanation: "heapq.nlargest(k, iterable) تحتفظ بـ Min-Heap حجمه k فقط، فتستهلك ذاكرة شبه معدومة وتتفوق على sorted() عند صغر k."
+            },
+            {
+                id: "ps_4",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • COMPLEXITY",
+                elo: 1490,
+                motif: "تكتيك: كسر فخ O(N²) إلى O(N)",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر: لفلترة `logs` واستبعاد المستخدمين الموجودين في قائمة `bot_users` (فيها 100 ألف عنصر)، الكود الحالي يستغرق دقائق لأن البحث `u not in bot_users` داخل List هو O(N)! كيف نحوله إلى بحث لحظي O(1)؟",
+                ioPreview: "List lookup: O(N) per item (Slow!) ➔ Hash Set lookup: O(1) per item (Instant!)",
+                codeTemplate: "# ❌ Blunder: bot_users is a list, making comprehension O(N * M)\nbot_set = ___(bot_users)\nclean_logs = [log for log in logs if log['user_id'] not in bot_set]",
+                answer: "set",
+                acceptedAnswers: ["set"],
+                options: ["set", "tuple", "iter", "list"],
+                orderTokens: ["bot_set = set(bot_users)", "clean_logs = [", "log for log in logs", "if log['user_id'] not in bot_set]"],
+                hint: "هيكل بيانات في بايثون يعتمد على Hash Table ويبحث في O(1).",
+                explanation: "تحويل القائمة إلى set(bot_users) مرة واحدة يجعل عملية البحث `in` أو `not in` تعمل في وقت ثابت O(1) بدلاً من مسح القائمة كاملة في كل مرة."
+            },
+            {
+                id: "ps_5",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • GENERATORS",
+                elo: 1520,
+                motif: "تكتيك: Lazy Streaming بدون استهلاك RAM",
+                type: "fill",
+                scenario: "نريد قراءة ملف لوج حجمه 40GB سطراً بسطر وإرجاع الأسطر التي تحوي 'CRITICAL' فقط كـ Generator دون تحميل الملف كله في الذاكرة:",
+                ioPreview: "40GB file ➔ O(1) RAM consumption via Lazy Evaluation",
+                codeTemplate: "def stream_critical(path):\n    with open(path) as f:\n        for line in f:\n            if 'CRITICAL' in line:\n                ___ line.strip()",
+                answer: "yield",
+                acceptedAnswers: ["yield"],
+                options: ["yield", "return", "emit", "next"],
+                orderTokens: ["def stream_critical(path):", "    with open(path) as f:", "        for line in f:", "            yield line.strip()"],
+                hint: "الكلمة المفتاحية التي تحول الدالة في بايثون إلى Generator.",
+                explanation: "الكلمة المفتاحية yield تُخرج عنصراً واحداً عند الطلب وتحتفظ بحالة الدالة، مما يسمح بمعالجة ملفات بحجم تيرابايت بذاكرة لا تتجاوز بضعة ميجابايت."
+            },
+            {
+                id: "ps_6",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • TWO POINTERS",
+                elo: 1640,
+                motif: "تكتيك: Deduplication مع الحفاظ على الترتيب",
+                type: "fill",
+                scenario: "ما هي أسرع وأنظف طريقة في Python 3.7+ لإزالة التكرارات من قائمة `items` مع الحفاظ التام على ترتيب ظهورها الأول في سطر واحد O(N)؟",
+                ioPreview: "['sql', 'dbt', 'sql', 'spark'] ➔ ['sql', 'dbt', 'spark']",
+                codeTemplate: "unique_ordered = list(dict.___(items))",
+                answer: "fromkeys",
+                acceptedAnswers: ["fromkeys"],
+                options: ["fromkeys", "keys", "unique", "items"],
+                orderTokens: ["unique_ordered =", "list(", "dict.fromkeys(items)", ")"],
+                hint: "ميثود في كلاس dict تنشئ قاموساً من عناصر القائمة كمفاتيح.",
+                explanation: "بما أن القواميس في Python 3.7+ تحافظ على ترتيب الإدخال (Insertion Order)، فإن list(dict.fromkeys(items)) تزيل التكرارات في O(N) وتحفظ الترتيب، على عكس set() التي تبعثر الترتيب."
+            },
+            {
+                id: "ps_7",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • SLIDING WINDOW",
+                elo: 1680,
+                motif: "تكتيك: نافذة منزلقة بحجم ثابت O(1)",
+                type: "fill",
+                scenario: "عند بناء Sliding Window تحتفظ فقط بآخر 100 قراءة من حساس بيانات (تحذف الأقدم تلقائياً عند إضافة قراءة جديدة في O(1)):",
+                ioPreview: "deque([1, 2, 3], maxlen=3) + append(4) ➔ deque([2, 3, 4])",
+                codeTemplate: "from collections import deque\nwindow = deque(___=100)",
+                answer: "maxlen",
+                acceptedAnswers: ["maxlen"],
+                options: ["maxlen", "size", "limit", "capacity"],
+                orderTokens: ["from collections import deque", "window = deque(maxlen=100)", "window.append(new_metric)"],
+                hint: "المعامل الذي يحدد الطول الأقصى للـ deque.",
+                explanation: "كائن deque(maxlen=K) يدعم الإضافة والحذف من الطرفين في O(1) ويطرد العنصر الأقدم تلقائياً عند امتلاء النافذة."
+            },
+            {
+                id: "ps_8",
+                topic: "problem_solving",
+                badge: "PROBLEM SOLVING • BINARY SEARCH",
+                elo: 1720,
+                motif: "تكتيك: تصنيف الشرائح في O(log N)",
+                type: "fill",
+                scenario: "لديك قائمة حدود مرتبة `brackets = [100, 500, 1000, 5000]` وتريد إيجاد موقع إدراج قيمة العميل `score` باستخدام البحث الثنائي (Binary Search) المدمج في بايثون:",
+                ioPreview: "brackets=[100, 500, 1000], score=650 ➔ index 2 (in O(log N))",
+                codeTemplate: "import bisect\ntier_idx = bisect.___(brackets, score)",
+                answer: "bisect_right",
+                acceptedAnswers: ["bisect_right", "bisect", "bisect_left"],
+                options: ["bisect_right", "binary_search", "searchsorted", "find_idx"],
+                orderTokens: ["import bisect", "brackets = [100, 500, 1000, 5000]", "tier_idx = bisect.bisect_right(brackets, score)"],
+                hint: "دالة في مكتبة bisect تحمل نفس اسم المكتبة أو تنتهي بـ _right.",
+                explanation: "موديول bisect ينفذ خوارزمية Binary Search بلغة C بسرعة فائقة O(log N) لتحديد الشرائح (Bucketing) في القوائم المرتبة."
+            },
+
+            // ==================== 🗄️ SQL & BIGQUERY (7 Puzzles) ====================
+            {
+                id: "sql_1",
+                topic: "sql",
+                badge: "SQL • MODERN DWH",
+                elo: 1420,
+                motif: "تكتيك: فلترة الـ Window مباشرة",
+                type: "fill",
+                scenario: "في BigQuery و Snowflake و Databricks، كيف نفلتر نتائج `ROW_NUMBER()` في نفس الاستعلام دون كتابة CTE أو Subquery إضافي؟",
+                ioPreview: "Keep only latest event per user_id in 1 flat SELECT",
+                codeTemplate: "SELECT user_id, status, updated_at\nFROM raw_events\n___ ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY updated_at DESC) = 1;",
+                answer: "QUALIFY",
+                acceptedAnswers: ["QUALIFY", "qualify"],
+                options: ["QUALIFY", "HAVING", "WHERE", "FILTER"],
+                orderTokens: ["SELECT user_id, status FROM raw_events", "QUALIFY ROW_NUMBER()", "OVER (PARTITION BY user_id", "ORDER BY updated_at DESC) = 1;"],
+                hint: "يتم تنفيذها في ترتيب SQL بعد تقييم دوال الـ Window.",
+                explanation: "ترتيب التنفيذ في SQL يقيم WHERE قبل Window Functions. لذا أضافت المحركات الحديثة QUALIFY لتعمل كـ WHERE خاصة بـ Window Functions."
+            },
+            {
+                id: "sql_2",
+                topic: "sql",
+                badge: "SQL • ANTI-JOIN TRAP",
+                elo: 1780,
+                motif: "تكتيك: فخ الـ NOT IN مع القيم الفارغة NULL",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر الكارثي: الاستعلام التالي يستخدم `WHERE id NOT IN (SELECT mgr_id FROM emp)`، وبسبب وجود صف واحد فيه `mgr_id = NULL`، يرجع الاستعلام **0 صفوف تماماً**! ما البديل الآمن في الـ Subquery لفحص عدم الوجود؟",
+                ioPreview: "id NOT IN (1, 2, NULL) ➔ Evaluates to UNKNOWN (Empty result set!)",
+                codeTemplate: "-- ❌ Blunder: returns 0 rows if subquery has any NULL!\n-- SELECT * FROM users u WHERE u.id NOT IN (SELECT user_id FROM churned);\n\n-- ✅ Safe Anti-Join:\nSELECT * FROM users u\nWHERE NOT ___ (SELECT 1 FROM churned c WHERE c.user_id = u.id);",
+                answer: "EXISTS",
+                acceptedAnswers: ["EXISTS", "exists"],
+                options: ["EXISTS", "IN", "ANY", "CONTAINS"],
+                orderTokens: ["SELECT * FROM users u", "WHERE NOT EXISTS (", "SELECT 1 FROM churned c", "WHERE c.user_id = u.id);"],
+                hint: "تعمل بمنطق Boolean True/False ولا تتأثر بوجود NULL في الجدول الفرعي.",
+                explanation: "في منطق SQL ثلاثي القيم (Three-Valued Logic)، `x NOT IN (1, NULL)` تعني `x != 1 AND x != NULL` وهو ما يعطي UNKNOWN دائماً! لذلك `NOT EXISTS` أو `LEFT JOIN ... WHERE IS NULL` هما الاختيار الآمن دائماً."
+            },
+            {
+                id: "sql_3",
+                topic: "sql",
+                badge: "SQL • GAPS & ISLANDS",
+                elo: 1920,
+                motif: "تكتيك: تجميع الفترات المتصلة (Islands)",
+                type: "fill",
+                scenario: "في مسألة Gaps & Islands الشهيرة في الإنترفيوهات: لحساب أطول سلسلة أيام دخول متتالية لكل مستخدم، نطرح رقم الصف المتسلسل من تاريخ الدخول للحصول على مفتاح ثابت لكل فترة متصلة:",
+                ioPreview: "2026-05-01 - 1 day = Apr 30 | 2026-05-02 - 2 days = Apr 30 (Same Island!)",
+                codeTemplate: "SELECT user_id, login_date,\n  DATE_SUB(login_date, INTERVAL ___() OVER (PARTITION BY user_id ORDER BY login_date) DAY) AS island_grp\nFROM daily_logins;",
+                answer: "ROW_NUMBER",
+                acceptedAnswers: ["ROW_NUMBER", "DENSE_RANK"],
+                options: ["ROW_NUMBER", "LAG", "NTILE", "COUNT"],
+                orderTokens: ["DATE_SUB(login_date,", "INTERVAL ROW_NUMBER()", "OVER (PARTITION BY user_id ORDER BY login_date) DAY)", "AS island_grp"],
+                hint: "دالة ترقيم تزيد بمقدار 1 مع كل يوم متصل.",
+                explanation: "عندما تكون التواريخ متتالية (تزيد بمقدار يوم واحد) والترقيم يزيد بمقدار 1، فإن الفرق بينهما يظل ثابتاً طوال السلسلة المتصلة، وبمجرد حدوث انقطاع يتغير الفرق فينشئ مجموعة جديدة!"
+            },
+            {
+                id: "sql_4",
+                topic: "sql",
+                badge: "SQL • WINDOW FRAMES",
+                elo: 1650,
+                motif: "تكتيك: فخ LAST_VALUE الافتراضي",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر: عند استخدام `LAST_VALUE(price)` مع `ORDER BY date`، الإطار الافتراضي في SQL ينتهي عند `CURRENT ROW` فيرجع سعر الصف الحالي بدلاً من آخر سعر في النافذة كلها! كيف نمدد نهاية النافذة لآخر صف؟",
+                ioPreview: "Default Frame: UNBOUNDED PRECEDING to CURRENT ROW ➔ Must extend to UNBOUNDED FOLLOWING",
+                codeTemplate: "LAST_VALUE(price) OVER (\n  PARTITION BY ticker ORDER BY trade_date\n  ROWS BETWEEN UNBOUNDED PRECEDING AND ___ FOLLOWING\n)",
+                answer: "UNBOUNDED",
+                acceptedAnswers: ["UNBOUNDED"],
+                options: ["UNBOUNDED", "ALL", "LAST", "CURRENT"],
+                orderTokens: ["LAST_VALUE(price) OVER (", "PARTITION BY ticker ORDER BY trade_date", "ROWS BETWEEN UNBOUNDED PRECEDING", "AND UNBOUNDED FOLLOWING)"],
+                hint: "نفس الكلمة المستخدمة قبل PRECEDING لتعني بلا حدود.",
+                explanation: "أشهر فخ في أسئلة SQL المتقدمة هو أن LAST_VALUE تستخدم إطاراً ينتهي عند CURRENT ROW افتراضياً. يجب كتابة ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING."
+            },
+            {
+                id: "sql_5",
+                topic: "sql",
+                badge: "SQL • BIGQUERY ARRAYS",
+                elo: 1510,
+                motif: "تكتيك: فك المصفوفات في BigQuery",
+                type: "fill",
+                scenario: "في Google BigQuery (و PostgreSQL)، ما الدالة التي تحول عمود مصفوفة `ARRAY` (مثل `event_params`) إلى جدول افتراضي يمكن عمل CROSS JOIN معه؟",
+                ioPreview: "events.event_params (REPEATED RECORD) ➔ Flattened rows",
+                codeTemplate: "SELECT e.event_name, p.key, p.value.string_value\nFROM `project.analytics.events` AS e\nCROSS JOIN ___(e.event_params) AS p;",
+                answer: "UNNEST",
+                acceptedAnswers: ["UNNEST"],
+                options: ["UNNEST", "EXPLODE", "FLATTEN", "EXPAND"],
+                orderTokens: ["SELECT e.event_name, p.key", "FROM `project.analytics.events` AS e", "CROSS JOIN UNNEST(e.event_params) AS p;"],
+                hint: "تبدأ بـ UN وتعني فك التداخل (Nesting).",
+                explanation: "في BigQuery يتم تخزين البيانات المتكررة كـ ARRAY<STRUCT>، وتستخدم UNNEST() لفرد المصفوفة كصفوف بدون تكلفة JOIN تقليدية."
+            },
+            {
+                id: "sql_6",
+                topic: "sql",
+                badge: "SQL • TIME SERIES",
+                elo: 1360,
+                motif: "تكتيك: مقارنة الشهر الحالي بالسابق",
+                type: "fill",
+                scenario: "لحساب نمو الإيرادات الشهري (MoM)، نحتاج لجلب إيراد الشهر السابق في نفس الصف مع وضع `0` كقيمة افتراضية لأول شهر:",
+                ioPreview: "Jan: 100 (prev: 0) | Feb: 150 (prev: 100)",
+                codeTemplate: "SELECT month, rev,\n  ___(rev, 1, 0) OVER (ORDER BY month) AS prev_rev\nFROM monthly_kpi;",
+                answer: "LAG",
+                acceptedAnswers: ["LAG"],
+                options: ["LAG", "LEAD", "PRIOR", "FIRST_VALUE"],
+                orderTokens: ["SELECT month, rev,", "LAG(rev, 1, 0)", "OVER (ORDER BY month)", "AS prev_rev FROM monthly_kpi;"],
+                hint: "دالة نافذة ترجع للخلف بمقدار offset.",
+                explanation: "LAG(column, offset, default_value) تجلب القيمة السابقة بدون الحاجة لعمل Self-Join مكلف على الجدول."
+            },
+            {
+                id: "sql_7",
+                topic: "sql",
+                badge: "SQL • DATA ENGINEERING",
+                elo: 1590,
+                motif: "تكتيك: Upsert ذري (MERGE INTO)",
+                type: "fill",
+                scenario: "لتحديث سجلات العملاء الموجودة وإدراج العملاء الجدد في جدول الهدف في عملية ذرية واحدة داخل المستودع:",
+                ioPreview: "Matched ID ➔ UPDATE | New ID ➔ INSERT",
+                codeTemplate: "___ INTO dim_customers AS t\nUSING stg_customers AS s ON t.id = s.id\nWHEN MATCHED THEN UPDATE SET t.tier = s.tier\nWHEN NOT MATCHED THEN INSERT (id, tier) VALUES (s.id, s.tier);",
+                answer: "MERGE",
+                acceptedAnswers: ["MERGE"],
+                options: ["MERGE", "UPSERT", "REPLACE", "SYNC"],
+                orderTokens: ["MERGE INTO dim_customers t", "USING stg_customers s ON t.id = s.id", "WHEN MATCHED THEN UPDATE SET t.tier = s.tier", "WHEN NOT MATCHED THEN INSERT (id, tier) VALUES (s.id, s.tier);"],
+                hint: "الجملة القياسية في SQL لدمج جدول المصدر في جدول الهدف.",
+                explanation: "MERGE INTO هي حجر الأساس لبناء جداول الأبعاد المتغيرة (SCD) والـ Incremental Loads في هندسة البيانات."
+            },
+
+            // ==================== 🐼 PANDAS & NUMPY (7 Puzzles) ====================
+            {
+                id: "pd_1",
+                topic: "pandas",
+                badge: "PANDAS • WINDOWING",
+                elo: 1410,
+                motif: "تكتيك: Broadcast Aggregation",
+                type: "fill",
+                scenario: "نريد حساب نسبة راتب كل موظف من إجمالي رواتب قسمه في خطوة واحدة، عبر إرجاع مجموع القسم بنفس طول الـ DataFrame الأصلي:",
+                ioPreview: "df['pct'] = df['salary'] / df.groupby('dept')['salary'].transform('sum')",
+                codeTemplate: "df['dept_share'] = df['salary'] / df.groupby('dept')['salary'].___('sum')",
+                answer: "transform",
+                acceptedAnswers: ["transform"],
+                options: ["transform", "agg", "apply", "map"],
+                orderTokens: ["df['dept_share'] =", "df['salary'] /", "df.groupby('dept')['salary']", ".transform('sum')"],
+                hint: "توزع نتيجة التجميع على كل صف في المجموعة الأصلية.",
+                explanation: "دالة transform('sum') تعيد Series بنفس فهرس وطول الـ DataFrame الأصلي، تماماً مثل SUM() OVER (PARTITION BY dept) في SQL."
+            },
+            {
+                id: "pd_2",
+                topic: "pandas",
+                badge: "PANDAS • TIME-SERIES JOIN",
+                elo: 1740,
+                motif: "تكتيك: ربط أقرب طابع زمني (Point-in-Time Join)",
+                type: "fill",
+                scenario: "لديك جدول صفقات `trades` وجدول أسعار لحظية `quotes` بطوابع زمنية غير متطابقة بالمللي ثانية. ما دالة Pandas المخصصة للربط مع أقرب طابع زمني سابق (منعاً لـ Data Leakage)؟",
+                ioPreview: "trade @ 10:00:02 ⋈ latest quote <= 10:00:02 (10:00:01)",
+                codeTemplate: "matched = pd.___(trades, quotes, on='timestamp', by='ticker', direction='backward')",
+                answer: "merge_asof",
+                acceptedAnswers: ["merge_asof"],
+                options: ["merge_asof", "merge_ordered", "join_nearest", "concat"],
+                orderTokens: ["pd.merge_asof(", "trades, quotes,", "on='timestamp',", "by='ticker', direction='backward')"],
+                hint: "تبدأ بـ merge_ وتنتهي بـ asof (أي As Of timestamp).",
+                explanation: "pd.merge_asof أساسية في هندسة الميزات (Feature Engineering) والبيانات المالية لأنها تربط كل حدث بآخر حالة معروفة قبله مباشرة دون تسريب بيانات مستقبلية."
+            },
+            {
+                id: "pd_3",
+                topic: "pandas",
+                badge: "NUMPY • VECTORIZATION",
+                elo: 1460,
+                motif: "تكتيك: شروط متعددة متجهة (Multi-Branch CASE WHEN)",
+                type: "fill",
+                scenario: "لعمل تصنيف متجه سريع بعدة شروط (أكثر من شرطين، مثل `CASE WHEN` في SQL) بدون حلقات تكرار في NumPy/Pandas:",
+                ioPreview: "conditions=[score>=90, score>=75], choices=['A', 'B'], default='C'",
+                codeTemplate: "df['grade'] = np.___(condlist=[df['s'] >= 90, df['s'] >= 75], choicelist=['A', 'B'], default='C')",
+                answer: "select",
+                acceptedAnswers: ["select"],
+                options: ["select", "where", "piecewise", "choose"],
+                orderTokens: ["df['grade'] = np.select(", "condlist=[df['s'] >= 90, df['s'] >= 75],", "choicelist=['A', 'B'],", "default='C')"],
+                hint: "تستخدم عندما يكون لديك قائمة شروط condlist وقائمة نتائج choicelist.",
+                explanation: "بينما تصلح np.where لشرط واحد (IF/ELSE)، فإن np.select هي المقابل المتجه الأسرع لـ CASE WHEN المتعددة في SQL."
+            },
+            {
+                id: "pd_4",
+                topic: "pandas",
+                badge: "PANDAS • MEMORY TRAP",
+                elo: 1550,
+                motif: "تكتيك: تجنب SettingWithCopyWarning",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر: الكود `df[df['age'] > 30]['status'] = 'Senior'` يستخدم Chained Indexing مما قد يعدل نسخة مؤقتة في الذاكرة ولا يعدل الـ DataFrame الأصلي! ما الطريقة القياسية الآمنة؟",
+                ioPreview: "Modify subset in-place safely in a single indexer call",
+                codeTemplate: "# ❌ Blunder: df[df['age'] > 30]['status'] = 'Senior'\n# ✅ Best Move:\ndf.___[df['age'] > 30, 'status'] = 'Senior'",
+                answer: "loc",
+                acceptedAnswers: ["loc"],
+                options: ["loc", "iloc", "at", "ix"],
+                orderTokens: ["df.loc[", "df['age'] > 30,", "'status'", "] = 'Senior'"],
+                hint: "المفهرس القياسي الذي يقبل [شرط الصفوف, اسم العمود].",
+                explanation: "استخدام df.loc[row_indexer, col_indexer] ينفذ التعديل مباشرة على الـ DataFrame الأصلي في خطوة واحدة ويمنع تحذير SettingWithCopyWarning."
+            },
+            {
+                id: "pd_5",
+                topic: "pandas",
+                badge: "PANDAS • RESHAPING",
+                elo: 1340,
+                motif: "تكتيك: Unpivot من عريض إلى طولي",
+                type: "fill",
+                scenario: "لتحويل جدول عريض يحتوي على أعمدة `['q1', 'q2', 'q3', 'q4']` إلى جدول طولي يحتوي على عمودين `quarter` و `revenue`:",
+                ioPreview: "Wide (id, q1, q2) ➔ Long (id, quarter, revenue)",
+                codeTemplate: "long_df = pd.___(df, id_vars=['id'], value_vars=['q1', 'q2'], var_name='quarter', value_name='revenue')",
+                answer: "melt",
+                acceptedAnswers: ["melt"],
+                options: ["melt", "pivot", "unstack", "explode"],
+                orderTokens: ["pd.melt(df,", "id_vars=['id'],", "value_vars=['q1', 'q2'],", "var_name='quarter', value_name='revenue')"],
+                hint: "تعني حرفياً 'إذابة' الأعمدة في صفوف.",
+                explanation: "pd.melt هي الأداة القياسية لعمل Unpivot وتحويل البيانات إلى الشكل الطولي (Tidy Data) المناسب للتحليل والرسم البياني."
+            },
+            {
+                id: "pd_6",
+                topic: "pandas",
+                badge: "PANDAS •PIVOT TABLE",
+                elo: 1310,
+                motif: "تكتيك: Cross-Tabulation مع التعامل مع التكرار",
+                type: "fill",
+                scenario: "إنشاء جدول محوري يلخص مجموع المبيعات لكل منطقة كصفوف ولكل فئة كأعمدة مع تعويض القيم الفارغة بصفر:",
+                ioPreview: "Rows: region | Cols: category | Cells: SUM(sales)",
+                codeTemplate: "pt = df.___(values='sales', index='region', columns='category', aggfunc='sum', fill_value=0)",
+                answer: "pivot_table",
+                acceptedAnswers: ["pivot_table"],
+                options: ["pivot_table", "pivot", "groupby", "crosstab_sum"],
+                orderTokens: ["df.pivot_table(", "values='sales',", "index='region', columns='category',", "aggfunc='sum', fill_value=0)"],
+                hint: "النسخة التي تدعم aggfunc على عكس pivot البسيطة.",
+                explanation: "df.pivot_table تدعم التجميع بواسطة aggfunc وتعالج القيم المكررة بأمان، بينما df.pivot تنهار إذا وجدت تكراراً في زوج الفهرس والعمود."
+            },
+            {
+                id: "pd_7",
+                topic: "pandas",
+                badge: "NUMPY • FAST CONDITIONAL",
+                elo: 1220,
+                motif: "تكتيك: Vectorized IF-ELSE",
+                type: "fill",
+                scenario: "أسرع طريقة متجهة لإنشاء عمود ثنائي في Pandas/NumPy إذا كانت القيمة أكبر من الصفر 'Profit' وإلا 'Loss':",
+                ioPreview: "net: [50, -10] ➔ ['Profit', 'Loss']",
+                codeTemplate: "df['result'] = np.___(df['net'] > 0, 'Profit', 'Loss')",
+                answer: "where",
+                acceptedAnswers: ["where"],
+                options: ["where", "if_else", "when", "apply"],
+                orderTokens: ["df['result'] =", "np.where(", "df['net'] > 0,", "'Profit', 'Loss')"],
+                hint: "دالة في NumPy تقبل (الشرط، القيمة عند التحقق، القيمة عند عدم التحقق).",
+                explanation: "np.where تعمل على مستوى مصفوفات C في الذاكرة وتتفوق في السرعة بمئات المرات على df.apply(lambda...)."
+            },
+
+            // ==================== ⚙️ DBT & AIRFLOW (6 Puzzles) ====================
+            {
+                id: "ae_1",
+                topic: "dbt_airflow",
+                badge: "DBT • INCREMENTAL MODELS",
+                elo: 1560,
+                motif: "تكتيك: فلترة التحديث التزايدي",
+                type: "fill",
+                scenario: "في dbt، ما هو الماكرو الشرطي الذي نستخدمه لمعرفة ما إذا كان الموديل يعمل في طور التحديث التزايدي (Incremental) لمعالجة الصفوف الجديدة فقط؟",
+                ioPreview: "Normal run ➔ Filter WHERE updated_at > max(this) | --full-refresh ➔ Process all",
+                codeTemplate: "SELECT * FROM {{ ref('stg_events') }}\n{% if ___() %}\n  WHERE event_ts > (SELECT MAX(event_ts) FROM {{ this }})\n{% endif %}",
+                answer: "is_incremental",
+                acceptedAnswers: ["is_incremental"],
+                options: ["is_incremental", "is_production", "incremental_mode", "table_exists"],
+                orderTokens: ["SELECT * FROM {{ ref('stg_events') }}", "{% if is_incremental() %}", "WHERE event_ts > (SELECT MAX(event_ts) FROM {{ this }})", "{% endif %}"],
+                hint: "يبدأ بـ is_ ويتحقق من وجود الجدول الهدف وعدم تفعيل full-refresh.",
+                explanation: "ماكرو is_incremental() يرجع True فقط إذا كان الموديل معرفاً كـ materialized='incremental' والجدول موجوداً بالفعل في المستودع."
+            },
+            {
+                id: "ae_2",
+                topic: "dbt_airflow",
+                badge: "DBT • LINEAGE DAG",
+                elo: 1180,
+                motif: "تكتيك: بناء شجرة الاعتمادية تلقائياً",
+                type: "fill",
+                scenario: "الدالة الأساسية في Jinja داخل dbt للإشارة إلى موديل آخر وبناء الـ Lineage Graph تلقائياً:",
+                ioPreview: "stg_orders ➔ int_orders_pivoted ➔ fct_orders",
+                codeTemplate: "SELECT * FROM {{ ___('stg_orders') }}",
+                answer: "ref",
+                acceptedAnswers: ["ref"],
+                options: ["ref", "source", "model", "link"],
+                orderTokens: ["SELECT * FROM", "{{ ref(", "'stg_orders'", ") }}"],
+                hint: "اختصار لكلمة Reference.",
+                explanation: "دالة {{ ref('model') }} تقوم بترجمة اسم الموديل إلى اسم الـ Schema والجدول الصحيحين حسب البيئة (Dev/Prod) وتبني شجرة التنفيذ."
+            },
+            {
+                id: "ae_3",
+                topic: "dbt_airflow",
+                badge: "DBT • RAW SOURCES",
+                elo: 1240,
+                motif: "تكتيك: قراءة الجداول الخام وفحص حداثتها",
+                type: "fill",
+                scenario: "في طبقة الـ Staging في dbt، كيف نشير إلى جدول خام `users` داخل مصدر معرف في YAML باسم `postgres_raw`؟",
+                ioPreview: "raw_db.public.users ➔ stg_postgres__users",
+                codeTemplate: "SELECT id, email FROM {{ ___('postgres_raw', 'users') }}",
+                answer: "source",
+                acceptedAnswers: ["source"],
+                options: ["source", "ref", "raw", "external"],
+                orderTokens: ["SELECT id, email FROM", "{{ source(", "'postgres_raw',", "'users') }}"],
+                hint: "تأخذ معاملين: اسم المصدر واسم الجدول.",
+                explanation: "{{ source('source_name', 'table_name') }} تربط الموديل بالجداول الخام وتسمح بتشغيل `dbt source freshness` لمراقبة تأخر البيانات."
+            },
+            {
+                id: "ae_4",
+                topic: "dbt_airflow",
+                badge: "AIRFLOW • BACKFILL TRAP",
+                elo: 1610,
+                motif: "تكتيك: منع طوفان التشغيل التاريخي",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر: مهندس بيانات وضع `start_date = datetime(2020, 1, 1)` في DAG يومي جديد ونسي تعطيل الـ Catchup، فقام Airflow بجدولة أكثر من 2000 تشغيلة قديمة دفعة واحدة! ما المعامل الذي يمنع ذلك؟",
+                ioPreview: "start_date=2020-01-01 + ___=False ➔ Runs only latest interval!",
+                codeTemplate: "with DAG(\n    dag_id='daily_dbt_build',\n    start_date=datetime(2020, 1, 1),\n    schedule='@daily',\n    ___=False\n) as dag:",
+                answer: "catchup",
+                acceptedAnswers: ["catchup"],
+                options: ["catchup", "backfill", "retroactive", "history"],
+                orderTokens: ["with DAG('daily_dbt',", "start_date=datetime(2020, 1, 1),", "schedule='@daily',", "catchup=False) as dag:"],
+                hint: "معامل منطقي في كائن DAG يحدد ما إذا كان سيلحق بالفترات الفائتة.",
+                explanation: "تحديد catchup=False ضروري جداً عند نشر DAG جديد بتاريخ بداية قديم لمنع Airflow من تشغيل مئات الـ Runs التاريخية تلقائياً."
+            },
+            {
+                id: "ae_5",
+                topic: "dbt_airflow",
+                badge: "AIRFLOW • XCOM",
+                elo: 1530,
+                motif: "تكتيك: تمرير Metadata بين المهام",
+                type: "fill",
+                scenario: "في Airflow، كيف تسحب قيمة صغيرة (مثل `batch_id`) أرجعتها مهمة سابقة اسمها `init_batch` داخل دالة Python تستخدم `ti` (TaskInstance)؟",
+                ioPreview: "init_batch (returns 'b_99') ➔ transform_task pulls 'b_99'",
+                codeTemplate: "batch_id = ti.___(task_ids='init_batch')",
+                answer: "xcom_pull",
+                acceptedAnswers: ["xcom_pull"],
+                options: ["xcom_pull", "get_xcom", "task_output", "fetch_state"],
+                orderTokens: ["def run_etl(ti):", "    batch_id = ti.xcom_pull(", "        task_ids='init_batch'", "    )"],
+                hint: "تبدأ بـ xcom_ وتدل على السحب.",
+                explanation: "ti.xcom_pull(task_ids='...') تُستخدم لتمرير البيانات الوصفية الصغيرة (Metadata/Paths) بين المهام، ولا يجب أبداً تمرير DataFrames ضخمة داخل XCom."
+            },
+            {
+                id: "ae_6",
+                topic: "dbt_airflow",
+                badge: "AIRFLOW • DEPENDENCIES",
+                elo: 1150,
+                motif: "تكتيك: ربط تتابع المهام",
+                type: "fill",
+                scenario: "الـ Bitshift Operator القياسي في Airflow لجعل مهمة `extract` تعمل أولاً ثم تليها قائمة المهام `[validate, stage]` بالتوازي:",
+                ioPreview: "extract ➔ (validate & stage in parallel)",
+                codeTemplate: "extract_task ___ [validate_task, stage_task]",
+                answer: ">>",
+                acceptedAnswers: [">>"],
+                options: [">>", "<<", "->", "|"],
+                orderTokens: ["extract_task", ">>", "[validate_task, stage_task]", ">> load_mart"],
+                hint: "علامتا أكبر من متتاليتان.",
+                explanation: "المعامل >> يحدد اتجاه الـ Downstream في Airflow ويدعم ربط مهمة بمهمة أو مهمة بقائمة مهام تعمل بالتوازي."
+            },
+
+            // ==================== 📊 POWER BI & DAX (6 Puzzles) ====================
+            {
+                id: "dax_1",
+                topic: "dax",
+                badge: "DAX • CONTEXT TRANSITION",
+                elo: 1300,
+                motif: "تكتيك: تعديل سياق الفلترة",
+                type: "fill",
+                scenario: "الدالة الأهم في DAX التي تغير سياق الفلترة الحالي (Filter Context) لحساب مبيعات الطلبات المكتملة فقط:",
+                ioPreview: "Override current visual filter with Orders[Status] = 'Completed'",
+                codeTemplate: "Completed Sales = ___([Total Sales], Orders[Status] = \"Completed\")",
+                answer: "CALCULATE",
+                acceptedAnswers: ["CALCULATE", "calculate"],
+                options: ["CALCULATE", "FILTER", "SUMX", "EVALUATE"],
+                orderTokens: ["Completed Sales =", "CALCULATE(", "[Total Sales],", "Orders[Status] = \"Completed\")"],
+                hint: "الدالة الوحيدة في DAX التي تعدل الـ Filter Context.",
+                explanation: "CALCULATE تقيم التعبير الأول داخل سياق فلترة جديد معدل بواسطة الشروط الممررة في المعاملات التالية."
+            },
+            {
+                id: "dax_2",
+                topic: "dax",
+                badge: "DAX • PERCENT OF TOTAL",
+                elo: 1570,
+                motif: "تكتيك: الحفاظ على فلاتر محددة وإلغاء الباقي",
+                type: "fill",
+                scenario: "نريد إزالة جميع الفلاتر من جدول `Customers` باستثناء فلتر العمود `Customers[Region]` لحساب نصيب العميل داخل منطقته فقط:",
+                ioPreview: "Remove Customer Name/City filters, keep only Region filter active",
+                codeTemplate: "Regional Total = CALCULATE([Total Sales], ___(Customers, Customers[Region]))",
+                answer: "ALLEXCEPT",
+                acceptedAnswers: ["ALLEXCEPT", "allexcept"],
+                options: ["ALLEXCEPT", "ALL", "ALLSELECTED", "KEEPFILTERS"],
+                orderTokens: ["CALCULATE(", "[Total Sales],", "ALLEXCEPT(Customers,", "Customers[Region]))"],
+                hint: "تبدأ بـ ALL وتليها كلمة تعني 'باستثناء'.",
+                explanation: "ALLEXCEPT(Table, Col1, ...) تمسح جميع الفلاتر على الجدول المذكور ما عدا الأعمدة المحددة صراحة بعد اسم الجدول."
+            },
+            {
+                id: "dax_3",
+                topic: "dax",
+                badge: "DAX • VIRTUAL RELATIONSHIPS",
+                elo: 1840,
+                motif: "تكتيك: ربط جدولين بدون علاقة فعلية (Lineage)",
+                type: "fill",
+                scenario: "لديك جدول الموازنة التقديرية `Budget` على مستوى السنة والشهر، ولا توجد علاقة مادية بينه وبين جدول `DimProduct[Category]`. ما هي أسرع دالة في DAX لنقل فلتر الفئات إلى جدول الموازنة افتراضياً؟",
+                ioPreview: "Apply values of VALUES(DimProduct[Category]) as a filter on Budget[Category]",
+                codeTemplate: "Allocated Budget = CALCULATE(\n    SUM(Budget[Amount]),\n    ___(VALUES(DimProduct[Category]), Budget[Category])\n)",
+                answer: "TREATAS",
+                acceptedAnswers: ["TREATAS", "treatas"],
+                options: ["TREATAS", "USERELATIONSHIP", "CROSSFILTER", "INTERSECT"],
+                orderTokens: ["CALCULATE(SUM(Budget[Amount]),", "TREATAS(", "VALUES(DimProduct[Category]),", "Budget[Category]))"],
+                hint: "تعامل أعمدة جدول كما لو كانت أعمدة جدول آخر (Treat As).",
+                explanation: "TREATAS هي الطريقة الأعلى أداءً في DAX لإنشاء علاقات افتراضية (Virtual Relationships) عندما تختلف درجة التفصيل (Granularity) بين الجداول."
+            },
+            {
+                id: "dax_4",
+                topic: "dax",
+                badge: "DAX • ITERATORS & VARIABLES",
+                elo: 1470,
+                motif: "تكتيك: الحساب صفاً بصف (Row Context)",
+                type: "fill",
+                scenario: "لحساب إجمالي الهامش الربحي بضرب `Qty * (Price - Cost)` لكل صف في جدول `Sales` ثم جمع النتيجة:",
+                ioPreview: "Row 1: 2*(10-6)=8 | Row 2: 1*(20-15)=5 ➔ Total = 13",
+                codeTemplate: "Total Margin = ___(Sales, Sales[Qty] * (Sales[Price] - Sales[Cost]))",
+                answer: "SUMX",
+                acceptedAnswers: ["SUMX", "sumx"],
+                options: ["SUMX", "SUM", "CALCULATE", "ADDCOLUMNS"],
+                orderTokens: ["Total Margin = SUMX(", "Sales,", "Sales[Qty] * (Sales[Price] - Sales[Cost])", ")"],
+                hint: "دالة تجميع تكرارية (Iterator) تنتهي بحرف X.",
+                explanation: "SUM لا تقبل سوى عمود واحد فقط، بينما SUMX تنشئ Row Context للمرور على الجدول صفاً بصف وتقييم المعادلة ثم جمع الناتج."
+            },
+            {
+                id: "dax_5",
+                topic: "dax",
+                badge: "DAX • ROLE-PLAYING DIMENSIONS",
+                elo: 1440,
+                motif: "تكتيك: تفعيل العلاقة المنقطة غير النشطة",
+                type: "fill",
+                scenario: "جدول `Sales` مرتبط بجدول `DimDate` بعلاقة نشطة على `OrderDate` وعلاقة غير نشطة (منقطة) على `DeliveryDate`. كيف نحسب المبيعات حسب تاريخ التسليم؟",
+                ioPreview: "Activate Sales[DeliveryDate] ➔ DimDate[Date] inside CALCULATE",
+                codeTemplate: "Delivered Sales = CALCULATE([Total Sales], ___(Sales[DeliveryDate], DimDate[Date]))",
+                answer: "USERELATIONSHIP",
+                acceptedAnswers: ["USERELATIONSHIP", "userelationship"],
+                options: ["USERELATIONSHIP", "RELATED", "CROSSFILTER", "LINKTABLE"],
+                orderTokens: ["CALCULATE([Total Sales],", "USERELATIONSHIP(", "Sales[DeliveryDate],", "DimDate[Date]))"],
+                hint: "تبدأ بـ USE وتحدد عمودي العلاقة غير النشطة.",
+                explanation: "USERELATIONSHIP تفعل العلاقة المنقطة مؤقتاً أثناء تقييم دالة CALCULATE وتوقف العلاقة النشطة الافتراضية."
+            },
+            {
+                id: "dax_6",
+                topic: "dax",
+                badge: "DAX • PERFORMANCE TRAP",
+                elo: 1690,
+                motif: "تكتيك: فلترة العمود بدلاً من الجدول الكامل",
+                type: "blunder",
+                scenario: "🚨 اكتشف البلندر: كتابة `FILTER(Sales, Sales[Amount] > 1000)` داخل `CALCULATE` تجبر محرك DAX على مسح جدول `Sales` بالكامل بكل أعمدته! كيف نمرر عموداً واحداً فقط لـ `FILTER` باستخدام `ALL` لسرعة أضعاف؟",
+                ioPreview: "Never filter the entire fact table when filtering 1 column!",
+                codeTemplate: "-- ❌ Blunder: CALCULATE([Total Sales], FILTER(Sales, Sales[Amount] > 1000))\n-- ✅ Best Move:\nHigh Value Sales = CALCULATE([Total Sales], FILTER(___(Sales[Amount]), Sales[Amount] > 1000))",
+                answer: "ALL",
+                acceptedAnswers: ["ALL", "VALUES", "KEEPFILTERS"],
+                options: ["ALL", "RELATEDTABLE", "DISTINCTROW", "TABLE"],
+                orderTokens: ["CALCULATE([Total Sales],", "FILTER(", "ALL(Sales[Amount]),", "Sales[Amount] > 1000))"],
+                hint: "دالة ترجع القيم الفريدة للعمود الواحد مع تجاهل الفلتر السابق عليه.",
+                explanation: "القاعدة الذهبية في DAX: Filter Columns, Never Tables! استخدام FILTER(ALL(Table[Col]), ...) يمسح القيم الفريدة للعمود فقط بدلاً من جدول الحركات المليوني."
+            },
+
+            // ==================== 💻 GIT, BASH & MATPLOTLIB (6 Puzzles) ====================
+            {
+                id: "gb_1",
+                topic: "git_bash_viz",
+                badge: "GIT • SURGICAL COMMIT",
+                elo: 1430,
+                motif: "تكتيك: اقتناص Commit محدد",
+                type: "fill",
+                scenario: "أصلح زميلك خطأً في معادلة SQL داخل فرع التطوير في الـ Commit رقم `9f3a1c`، وتريد سحب هذا الـ Commit وحده فقط إلى فرع `main` دون دمج باقي الفرع:",
+                ioPreview: "dev (commit 9f3a1c) ➔ Apply only 9f3a1c onto main",
+                codeTemplate: "git ___ 9f3a1c",
+                answer: "cherry-pick",
+                acceptedAnswers: ["cherry-pick"],
+                options: ["cherry-pick", "rebase", "merge", "bisect"],
+                orderTokens: ["git checkout main", "git cherry-pick", "9f3a1c"],
+                hint: "تعني حرفياً 'قطف الكرز'.",
+                explanation: "git cherry-pick ينسخ التعديلات الموجودة في Commit محدد ويطبقها كـ Commit جديد على فرعك الحالي."
+            },
+            {
+                id: "gb_2",
+                topic: "git_bash_viz",
+                badge: "GIT • DEBUGGING",
+                elo: 1660,
+                motif: "تكتيك: البحث الثنائي عن الـ Commit المسبب للعطل",
+                type: "fill",
+                scenario: "اكتشفت أن أرقام التقرير المالي انكسرت في آخر 200 Commit ولا تعرف أي Commit سبب المشكلة. ما أمر Git الذي يستخدم Binary Search لإيجاده في 8 خطوات فقط؟",
+                ioPreview: "200 commits ➔ Binary search (good vs bad) finds culprit in ~8 steps",
+                codeTemplate: "git ___ start\ngit ___ bad HEAD\ngit ___ good v1.2.0",
+                answer: "bisect",
+                acceptedAnswers: ["bisect"],
+                options: ["bisect", "blame", "reflog", "grep"],
+                orderTokens: ["git bisect start", "git bisect bad HEAD", "git bisect good v1.2.0"],
+                hint: "نفس اسم خوارزمية تقسيم المجال إلى نصفين.",
+                explanation: "git bisect يقسم التاريخ بين Commit سليم وآخر معطوب بالبحث الثنائي حتى يحدد لك الـ Commit المذنب بدقة."
+            },
+            {
+                id: "gb_3",
+                topic: "git_bash_viz",
+                badge: "BASH • DATA WRANGLING",
+                elo: 1500,
+                motif: "تكتيك: فلترة وحساب ملفات CSV من الـ Terminal",
+                type: "fill",
+                scenario: "باستخدام أداة معالجة الأعمدة الشهيرة في Linux، اطبع السطر إذا كان العمود الثالث أكبر من 500 في ملف مفصول بفاصلة:",
+                ioPreview: "events.csv (col1,col2,col3) ➔ Print rows where $3 > 500",
+                codeTemplate: "___ -F',' '$3 > 500 {print $1, $3}' transactions.csv",
+                answer: "awk",
+                acceptedAnswers: ["awk"],
+                options: ["awk", "sed", "grep", "cut"],
+                orderTokens: ["awk", "-F','", "'$3 > 500 {print $1, $3}'", "transactions.csv"],
+                hint: "أداة برمجية من 3 حروف لمعالجة الأعمدة في يونكس.",
+                explanation: "awk أداة لا غنى عنها لمهندسي البيانات لفحص الملفات الضخمة من الـ CLI مباشرة بدون فتح Python."
+            },
+            {
+                id: "gb_4",
+                topic: "git_bash_viz",
+                badge: "BASH • JSON PARSING",
+                elo: 1540,
+                motif: "تكتيك: استخراج حقول JSON من الـ API",
+                type: "fill",
+                scenario: "في الـ Terminal، ما هي الأداة القياسية لتحليل (Parse) مخرجات JSON واستخراج حقل `.data[].user_id` مباشرة في الـ Pipeline؟",
+                ioPreview: "curl api/users | ___ '.data[].user_id'",
+                codeTemplate: "curl -s https://api.internal/runs | ___ '.data[].status'",
+                answer: "jq",
+                acceptedAnswers: ["jq"],
+                options: ["jq", "awk", "yq", "sed"],
+                orderTokens: ["curl -s https://api.internal/runs", "| jq", "'.data[].status'"],
+                hint: "مكونة من حرفين: الأول J من JSON والثاني Q من Query.",
+                explanation: "أداة jq هي بمثابة sed/awk ولكن لبيانات JSON، وتستخدم بكثرة في سكريبتات الـ CI/CD والـ Data Engineering."
+            },
+            {
+                id: "gb_5",
+                topic: "git_bash_viz",
+                badge: "MATPLOTLIB • DUAL AXIS",
+                elo: 1490,
+                motif: "تكتيك: رسم محورين Y بمقياسين مختلفين",
+                type: "fill",
+                scenario: "تريد رسم حجم المبيعات بالملايين ونسبة النمو المئوية (%) على نفس الرسم البياني في Matplotlib عبر إنشاء محور Y ثانٍ يشترك في نفس محور X:",
+                ioPreview: "Left Y-axis: Revenue ($) | Right Y-axis: Growth (%) sharing X-axis",
+                codeTemplate: "fig, ax1 = plt.subplots()\nax2 = ax1.___()\nax1.bar(months, revenue)\nax2.plot(months, growth_pct, color='cyan')",
+                answer: "twinx",
+                acceptedAnswers: ["twinx"],
+                options: ["twinx", "twiny", "secondary_yaxis", "sharex"],
+                orderTokens: ["fig, ax1 = plt.subplots()", "ax2 = ax1.twinx()", "ax1.bar(months, revenue)", "ax2.plot(months, growth_pct)"],
+                hint: "تبدأ بـ twin وتنتهي بـ x لأن المحورين يشتركان في محور X.",
+                explanation: "ax1.twinx() تنشئ محوراً جديداً على اليمين يشترك في نفس محور X، وهو مثالي لمقارنة مؤشرين بوحدات قياس مختلفة."
+            },
+            {
+                id: "gb_6",
+                topic: "git_bash_viz",
+                badge: "MATPLOTLIB • TARGET LINE",
+                elo: 1290,
+                motif: "تكتيك: خط الهدف المرجعي (Threshold Line)",
+                type: "fill",
+                scenario: "إضافة خط أفقي مرجعي متقطع يمتد بعرض الرسم البياني عند قيمة الـ SLA أو الهدف `y = 99.5`:",
+                ioPreview: "Horizontal dashed red line across entire chart at y=99.5",
+                codeTemplate: "ax.___(y=99.5, color='red', linestyle='--', label='SLA Target')",
+                answer: "axhline",
+                acceptedAnswers: ["axhline"],
+                options: ["axhline", "axvline", "hlines", "plot_line"],
+                orderTokens: ["ax.axhline(", "y=99.5,", "color='red', linestyle='--',", "label='SLA Target')"],
+                hint: "تبدأ بـ ax وتليها hline (أي Horizontal Line).",
+                explanation: "ax.axhline(y=...) ترسم خطاً أفقياً يمتد تلقائياً من أول الرسم لآخره بغض النظر عن حدود محور X."
+            }
+        ];
+
+        /*************************************************************************
+         * 2. INTERVIEW BOSS FIGHT TRACKS (4 COMPLETE MULTI-STAGE TRACKS)
+         *************************************************************************/
+        const INTERVIEW_TRACKS = [
+            {
+                id: "iv_ae",
+                title: "Senior Analytics Engineer Interview",
+                company: "FinTech Unicorn • Data Platform Team",
+                eloReq: 1550,
+                icon: "fa-sitemap",
+                color: "cyan",
+                desc: "4 مراحل مترابطة تختبر إتقانك لـ Modern SQL، ونماذج dbt التزايدية، وجدولة Airflow الآمنة.",
+                puzzleIds: ["sql_1", "sql_2", "ae_1", "ae_4"]
+            },
+            {
+                id: "iv_spark",
+                title: "Big Data & PySpark Architect Interview",
+                company: "Global Streaming Scale • Petabyte Lakehouse",
+                eloReq: 1700,
+                icon: "fa-fire-flame-curved",
+                color: "amber",
+                desc: "4 مراحل تركز على تحسين أداء PySpark، وتجنب الـ OOM والـ Shuffles، وتحليل السلاسل الزمنية.",
+                puzzleIds: ["spk_1", "spk_4", "spk_7", "sql_3"]
+            },
+            {
+                id: "iv_bi_ps",
+                title: "Lead Data & BI Specialist Interview",
+                company: "E-Commerce Giant • Executive Analytics",
+                eloReq: 1600,
+                icon: "fa-chart-line",
+                color: "emerald",
+                desc: "4 مراحل تجمع بين DAX المتقدم (Context & Virtual Relationships)، وPandas، والـ Problem Solving.",
+                puzzleIds: ["dax_3", "dax_6", "pd_2", "ps_4"]
+            },
+            {
+                id: "iv_gm",
+                title: "The Grandmaster Gauntlet (تحدي شامل)",
+                company: "Principal Data Architect • Final Boss",
+                eloReq: 1850,
+                icon: "fa-chess-king",
+                color: "purple",
+                desc: "5 مراحل عشوائية متدرجة الصعوبة من كل التخصصات لاختبار جاهزيتك الكاملة تحت ضغط الوقت.",
+                puzzleIds: "random_5"
+            }
+        ];
+
+        /*************************************************************************
+         * 3. STATE MANAGEMENT & ELO RATING ENGINE
+         *************************************************************************/
+        const STORAGE_KEY = "syntax_gm_state_v3";
+
+        let state = {
+            elo: 1200,
+            peakElo: 1200,
+            eloHistory: [1200],
+            streak: 0,
+            brilliantCount: 0,
+            rushBest: 0,
+            solvedIds: [],
+            blunderIds: [],
+            cleanStreakPerCard: {}, // id -> consecutive clean solves to graduate from Blunder Book
+            passedInterviews: []
+        };
+
+        let currentMode = "tactics"; // 'tactics' | 'rush' | 'mate3' | 'interview' | 'vault'
+        let currentTopic = "all";
+        let currentPuzzle = null;
+        let isPuzzleResolved = false;
+        let usedHintOnCurrent = false;
+        let mistakesOnCurrent = 0;
+        let audioOn = true;
+
+        // Mate in 3 state
+        let mate3Selected = [];
+        let mate3Pool = [];
+
+        // Puzzle Rush state
+        let rushActive = false;
+        let rushScore = 0;
+        let rushLives = 3;
+        let rushSeconds = 180;
+        let rushInterval = null;
+
+        // Interview state
+        let activeInterview = null;
+        let ivStageIdx = 0;
+        let ivPuzzles = [];
+        let ivResults = [];
+        let ivTimerSeconds = 90;
+        let ivTimerInterval = null;
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    state = { ...state, ...parsed };
+                    if (!Array.isArray(state.eloHistory) || state.eloHistory.length === 0) {
+                        state.eloHistory = [state.elo];
+                    }
+                }
+            } catch (e) {
+                console.warn("Storage error:", e);
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {}
+            updateGrandmasterHUD();
+        }
+
+        // Standard Chess ELO calculation (K=32)
+        function calculateEloChange(playerElo, puzzleElo, score, isBrilliant = false) {
+            const K = 32;
+            const expected = 1 / (1 + Math.pow(10, (puzzleElo - playerElo) / 400));
+            let delta = Math.round(K * (score - expected));
+            if (score === 1 && delta < 4) delta = 4; // Always reward at least +4 for solving easy puzzles
+            if (isBrilliant) delta += 8; // +8 ELO Bonus for typing from memory (!! Brilliant)
+            return delta;
+        }
+
+        function getRankMeta(elo) {
+            if (elo < 1200) return { icon: "♟️", title: "Pawn (بيدق البيانات)" };
+            if (elo < 1400) return { icon: "♞", title: "Knight (فارس التكتيك)" };
+            if (elo < 1600) return { icon: "♝", title: "Bishop (فيل الأناليتكس)" };
+            if (elo < 1800) return { icon: "♜", title: "Rook (رخ الـ Pipelines)" };
+            if (elo < 2000) return { icon: "♛", title: "International Master" };
+            return { icon: "♚", title: "Data Grandmaster" };
+        }
+
+        /*************************************************************************
+         * 4. WEB AUDIO CHESS & MOVE SYNTHESIZER
+         *************************************************************************/
+        let audioCtx = null;
+        function getAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            return audioCtx;
+        }
+
+        function playSound(effect) {
+            if (!audioOn) return;
+            try {
+                const ctx = getAudio();
+                if (ctx.state === 'suspended') ctx.resume();
+                const now = ctx.currentTime;
+
+                if (effect === 'brilliant') {
+                    // Glorious 4-note arpeggio for !! Brilliant
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + i * 0.065);
+                        gain.gain.setValueAtTime(0.18, now + i * 0.065);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.065 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + i * 0.065);
+                        osc.stop(now + i * 0.065 + 0.35);
+                    });
+                } else if (effect === 'best') {
+                    // Crisp wooden chess piece snap + chime
+                    [440, 659.25].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + i * 0.07);
+                        gain.gain.setValueAtTime(0.16, now + i * 0.07);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + i * 0.07);
+                        osc.stop(now + i * 0.07 + 0.25);
+                    });
+                } else if (effect === 'blunder') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(155, now);
+                    osc.frequency.linearRampToValueAtTime(92, now + 0.3);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.32);
+                } else if (effect === 'move') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(700, now);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.04);
+                }
+            } catch (e) {}
+        }
+
+        function toggleAudio() {
+            audioOn = !audioOn;
+            document.getElementById('audioIcon').className = audioOn
+                ? 'fa-solid fa-volume-high'
+                : 'fa-solid fa-volume-xmark text-gray-500';
+            showToast(audioOn ? "تم تفعيل أصوات الرقعة التكتيكية 🔊" : "تم كتم الصوت 🔇");
+        }
+
+        /*************************************************************************
+         * 5. PARTICLE CONFETTI OVERLAY
+         *************************************************************************/
+        const pCanvas = document.getElementById('particleCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            pCanvas.width = window.innerWidth;
+            pCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function spawnConfetti(count = 30, palette = ['#06b6d4', '#10b981', '#fbbf24', '#8b5cf6']) {
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: cx,
+                    y: cy,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.7) * 15,
+                    size: Math.random() * 6 + 3,
+                    color: palette[Math.floor(Math.random() * palette.length)],
+                    alpha: 1
+                });
+            }
+        }
+
+        function animateConfetti() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.35;
+                p.alpha -= 0.022;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                pCtx.globalAlpha = p.alpha;
+                pCtx.fillStyle = p.color;
+                pCtx.fillRect(p.x, p.y, p.size, p.size);
+            }
+            requestAnimationFrame(animateConfetti);
+        }
+
+        /*************************************************************************
+         * 6. HUD, SPARKLINE GRAPH & TOPIC BARS
+         *************************************************************************/
+        function updateGrandmasterHUD() {
+            const rank = getRankMeta(state.elo);
+            document.getElementById('hudRankIcon').textContent = rank.icon;
+            document.getElementById('hudRankTitle').textContent = rank.title;
+            document.getElementById('hudEloValue').textContent = state.elo;
+            document.getElementById('hudBrilliantCount').textContent = state.brilliantCount;
+            document.getElementById('hudRushBest').textContent = state.rushBest;
+            document.getElementById('blunderCountBadge').textContent = state.blunderIds.length;
+            document.getElementById('boardStreakVal').textContent = state.streak;
+            document.getElementById('eloPeakText').textContent = `Peak: ${state.peakElo}`;
+            document.getElementById('overallSolvedBadge').textContent = `${state.solvedIds.length} / ${PUZZLE_BANK.length}`;
+            document.getElementById('interviewsPassedCount').textContent = `${state.passedInterviews.length} / ${INTERVIEW_TRACKS.length}`;
+
+            renderEloSparkline();
+            renderTopicMasteryBars();
+        }
+
+        function renderEloSparkline() {
+            const svg = document.getElementById('eloSparkline');
+            const hist = state.eloHistory.slice(-20);
+            if (hist.length < 2) hist.unshift(1200);
+
+            const minElo = Math.min(...hist) - 25;
+            const maxElo = Math.max(...hist) + 25;
+            const width = 260;
+            const height = 60;
+
+            const points = hist.map((val, idx) => {
+                const x = (idx / (hist.length - 1)) * width;
+                const y = height - ((val - minElo) / Math.max(1, maxElo - minElo)) * (height - 12) - 6;
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+
+            const lastPt = points.split(' ').pop().split(',');
+            svg.innerHTML = `
+                <defs>
+                    <linearGradient id="eloGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <polygon points="0,${height} ${points} ${width},${height}" fill="url(#eloGrad)" />
+                <polyline fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
+                <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="4" fill="#fbbf24" stroke="#0b0f19" stroke-width="1.5" />
+            `;
+        }
+
+        function renderTopicMasteryBars() {
+            const meta = [
+                { key: 'pyspark', label: '🔥 PySpark & Big Data', color: 'bg-orange-400' },
+                { key: 'problem_solving', label: '🧠 Problem Solving (Python)', color: 'bg-emerald-400' },
+                { key: 'sql', label: '🗄️ SQL & BigQuery', color: 'bg-blue-400' },
+                { key: 'pandas', label: '🐼 Pandas & NumPy', color: 'bg-purple-400' },
+                { key: 'dbt_airflow', label: '⚙️ dbt & Airflow', color: 'bg-teal-400' },
+                { key: 'dax', label: '📊 Power BI & DAX', color: 'bg-amber-400' },
+                { key: 'git_bash_viz', label: '💻 Git, Bash & Viz', color: 'bg-pink-400' }
+            ];
+
+            const container = document.getElementById('topicMasteryBars');
+            container.innerHTML = '';
+            meta.forEach(m => {
+                const total = PUZZLE_BANK.filter(p => p.topic === m.key).length;
+                const solved = PUZZLE_BANK.filter(p => p.topic === m.key && state.solvedIds.includes(p.id)).length;
+                const pct = total ? Math.round((solved / total) * 100) : 0;
+                container.innerHTML += `
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-gray-300 font-semibold">${m.label}</span>
+                            <span class="font-mono text-gray-400">${solved}/${total} (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div class="h-full ${m.color} transition-all duration-500" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        /*************************************************************************
+         * 7. PUZZLE SELECTION (SPACED REPETITION + ELO MATCHMAKING)
+         *************************************************************************/
+        function getFilteredPuzzles() {
+            if (currentTopic === 'blunders') {
+                const blunders = PUZZLE_BANK.filter(p => state.blunderIds.includes(p.id));
+                return blunders.length > 0 ? blunders : PUZZLE_BANK;
+            }
+            if (currentTopic === 'all') return PUZZLE_BANK;
+            return PUZZLE_BANK.filter(p => p.topic === currentTopic);
+        }
+
+        function pickNextTacticalPuzzle() {
+            const pool = getFilteredPuzzles();
+            if (rushActive) {
+                // In Puzzle Rush, progressively increase difficulty based on rushScore
+                const targetElo = 1150 + rushScore * 45;
+                const sorted = [...pool].sort((a, b) => Math.abs(a.elo - targetElo) - Math.abs(b.elo - targetElo));
+                const candidates = sorted.slice(0, Math.min(6, sorted.length));
+                return candidates[Math.floor(Math.random() * candidates.length)];
+            }
+
+            // Weighted Spaced Repetition: Blunders get 4x priority, Unsolved get 2.5x priority
+            let weighted = [];
+            pool.forEach(p => {
+                if (currentPuzzle && pool.length > 1 && p.id === currentPuzzle.id) return;
+                let w = 1;
+                if (state.blunderIds.includes(p.id)) w = 4;
+                else if (!state.solvedIds.includes(p.id)) w = 3;
+                for (let i = 0; i < w; i++) weighted.push(p);
+            });
+            if (weighted.length === 0) weighted = pool;
+            return weighted[Math.floor(Math.random() * weighted.length)];
+        }
+
+        function loadPuzzleOnBoard(forcedPuzzle = null) {
+            isPuzzleResolved = false;
+            usedHintOnCurrent = false;
+            mistakesOnCurrent = 0;
+            currentPuzzle = forcedPuzzle || pickNextTacticalPuzzle();
+
+            // Reset UI elements
+            document.getElementById('evalDrawer').classList.add('hidden');
+            document.getElementById('hintBanner').classList.add('hidden');
+
+            document.getElementById('puzzleEloBadge').textContent = `ELO ${currentPuzzle.elo}`;
+            document.getElementById('puzzleTopicBadge').textContent = currentPuzzle.badge;
+            document.getElementById('puzzleMotifBadge').textContent = `🎯 ${currentPuzzle.motif}`;
+            document.getElementById('puzzleScenarioText').textContent = currentPuzzle.scenario;
+            document.getElementById('puzzleIoPreview').textContent = currentPuzzle.ioPreview;
+
+            // Set filename extension by topic
+            const extMap = {
+                pyspark: 'spark_job.py',
+                problem_solving: 'algorithm_tactic.py',
+                sql: 'warehouse_query.sql',
+                pandas: 'feature_pipeline.py',
+                dbt_airflow: 'dbt_airflow_dag.sql',
+                dax: 'powerbi_measure.dax',
+                git_bash_viz: 'terminal_pipeline.sh'
+            };
+            document.getElementById('terminalFileName').textContent = extMap[currentPuzzle.topic] || 'solution.py';
+
+            updateBlunderBookmarkButton();
+
+            const codeBox = document.getElementById('codeTerminalBox');
+            const stdArea = document.getElementById('interactionStandard');
+            const mate3Area = document.getElementById('interactionMate3');
+
+            if (currentMode === 'mate3') {
+                codeBox.classList.add('hidden');
+                stdArea.classList.add('hidden');
+                mate3Area.classList.remove('hidden');
+                mate3Area.classList.add('flex');
+                document.getElementById('puzzleTypeBanner').innerHTML = `<i class="fa-solid fa-chess-king text-purple-400"></i> <span>كش مات في 3: رتب خطوات الكود بالترتيب المنطقي الصحيح للوصول للحل:</span>`;
+                setupMate3Board();
+            } else {
+                codeBox.classList.remove('hidden');
+                stdArea.classList.remove('hidden');
+                mate3Area.classList.add('hidden');
+                mate3Area.classList.remove('flex');
+
+                if (currentPuzzle.type === 'blunder') {
+                    document.getElementById('puzzleTypeBanner').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> <span class="text-red-300">إصلاح بلندر (?? ➔ !): اكتشف الخطأ في الكود واكتب أو اختر البديل الصحيح:</span>`;
+                } else {
+                    document.getElementById('puzzleTypeBanner').innerHTML = `<i class="fa-solid fa-crosshairs text-cyan-400"></i> <span>العب النقلة الأفضل (اكتب الكود غيباً للحصول على !! Brilliant أو اختر من الكبسولات):</span>`;
+                }
+
+                // Format code display with highlighted blank
+                const formattedCode = currentPuzzle.codeTemplate.replace(
+                    /___/g,
+                    `<span class="px-2.5 py-0.5 mx-1 rounded bg-cyan-500/20 border border-cyan-400 text-cyan-300 font-black animate-pulse">???</span>`
+                );
+                document.getElementById('puzzleCodeDisplay').innerHTML = formattedCode;
+
+                const inputEl = document.getElementById('userCodeInput');
+                inputEl.value = '';
+                inputEl.disabled = false;
+                if (!rushActive) setTimeout(() => inputEl.focus(), 40);
+
+                // Render 4 Tactical Option Buttons
+                const shuffledOpts = [...currentPuzzle.options].sort(() => Math.random() - 0.5);
+                const grid = document.getElementById('optionsGrid');
+                grid.innerHTML = '';
+                shuffledOpts.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = "btn-tactical p-3 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-700 hover:border-emerald-400 text-left font-mono text-sm text-gray-100 flex items-center justify-between transition group";
+                    btn.innerHTML = `
+                        <span class="font-semibold group-hover:text-emerald-300">${opt}</span>
+                        <kbd class="text-[10px] bg-gray-900 text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">${idx + 1}</kbd>
+                    `;
+                    btn.onclick = () => selectOptionChip(opt);
+                    grid.appendChild(btn);
+                });
+            }
+        }
+
+        function triggerHint() {
+            if (!currentPuzzle || isPuzzleResolved) return;
+            playSound('move');
+            usedHintOnCurrent = true;
+            const banner = document.getElementById('hintBanner');
+            document.getElementById('hintTextContent').textContent = `💡 تلميح الفيل: ${currentPuzzle.hint} (أول حرفين: ${currentPuzzle.answer.slice(0, 2)}...)`;
+            banner.classList.remove('hidden');
+        }
+
+        function normalizeCodeStr(str) {
+            return str.trim().replace(/^['"]|['"]$/g, '').replace(/\s+/g, ' ').toLowerCase();
+        }
+
+        function isAnswerMatch(userInput, puzzle) {
+            const normUser = normalizeCodeStr(userInput);
+            if (normUser === normalizeCodeStr(puzzle.answer)) return true;
+            if (Array.isArray(puzzle.acceptedAnswers)) {
+                return puzzle.acceptedAnswers.some(acc => normalizeCodeStr(acc) === normUser);
+            }
+            return false;
+        }
+
+        // Submitted via typing in the input box -> Candidate for !! Brilliant Move
+        function submitTypedMove() {
+            if (isPuzzleResolved) {
+                nextPuzzle();
+                return;
+            }
+            const inputEl = document.getElementById('userCodeInput');
+            const val = inputEl.value.trim();
+            if (!val) return;
+
+            const correct = isAnswerMatch(val, currentPuzzle);
+            const isBrilliant = correct && !usedHintOnCurrent && mistakesOnCurrent === 0;
+            evaluateMove(correct, isBrilliant ? 'brilliant' : (correct ? (usedHintOnCurrent ? 'inaccuracy' : 'best') : 'blunder'));
+        }
+
+        // Submitted via clicking one of the 4 option chips -> ! Best Move
+        function selectOptionChip(chosenOpt) {
+            if (isPuzzleResolved) return;
+            const correct = isAnswerMatch(chosenOpt, currentPuzzle);
+            const moveGrade = correct ? (usedHintOnCurrent ? 'inaccuracy' : 'best') : 'blunder';
+            document.getElementById('userCodeInput').value = chosenOpt;
+            evaluateMove(correct, moveGrade);
+        }
+
+        /*************************************************************************
+         * 8. MATE IN 3 (PIPELINE ORDERING) ENGINE
+         *************************************************************************/
+        function setupMate3Board() {
+            mate3Selected = [];
+            mate3Pool = currentPuzzle.orderTokens
+                .map((text, idx) => ({ id: idx, text }))
+                .sort(() => Math.random() - 0.5);
+            renderMate3Zones();
+        }
+
+        function renderMate3Zones() {
+            const target = document.getElementById('mate3TargetZone');
+            const source = document.getElementById('mate3SourceZone');
+            target.innerHTML = '';
+            source.innerHTML = '';
+
+            mate3Selected.forEach((tok, idx) => {
+                const stepBtn = document.createElement('button');
+                stepBtn.className = "px-3.5 py-2 rounded-lg bg-purple-950/50 border border-purple-500/60 text-purple-200 font-mono text-xs sm:text-sm text-left flex items-center justify-between hover:bg-red-950/40 transition";
+                stepBtn.innerHTML = `<span><strong class="text-purple-400 mr-2">${idx + 1}.</strong> ${tok.text}</span> <i class="fa-solid fa-xmark text-xs text-gray-500"></i>`;
+                stepBtn.onclick = () => {
+                    if (isPuzzleResolved) return;
+                    playSound('move');
+                    mate3Selected.splice(idx, 1);
+                    mate3Pool.push(tok);
+                    renderMate3Zones();
+                };
+                target.appendChild(stepBtn);
+            });
+
+            mate3Pool.forEach((tok, idx) => {
+                const chip = document.createElement('button');
+                chip.className = "px-3.5 py-2 rounded-lg bg-gray-950 hover:bg-gray-800 border border-gray-700 text-gray-200 font-mono text-xs sm:text-sm transition";
+                chip.textContent = tok.text;
+                chip.onclick = () => {
+                    if (isPuzzleResolved) return;
+                    playSound('move');
+                    mate3Pool.splice(idx, 1);
+                    mate3Selected.push(tok);
+                    renderMate3Zones();
+                };
+                source.appendChild(chip);
+            });
+        }
+
+        function resetMate3Order() {
+            if (isPuzzleResolved) return;
+            setupMate3Board();
+        }
+
+        function submitMate3Move() {
+            if (isPuzzleResolved) {
+                nextPuzzle();
+                return;
+            }
+            const userSeq = mate3Selected.map(t => t.text).join(' ');
+            const expectedSeq = currentPuzzle.orderTokens.join(' ');
+            const correct = userSeq === expectedSeq;
+            evaluateMove(correct, correct ? 'best' : 'blunder');
+        }
+
+        /*************************************************************************
+         * 9. CHESS MOVE EVALUATION & SPACED REPETITION RECORDING
+         *************************************************************************/
+        function evaluateMove(isCorrect, grade) {
+            // Handle Puzzle Rush immediate flow
+            if (rushActive) {
+                handleRushMove(isCorrect);
+                return;
+            }
+
+            isPuzzleResolved = true;
+            document.getElementById('userCodeInput').disabled = true;
+
+            // Update code box with revealed answer
+            const codeEl = document.getElementById('puzzleCodeDisplay');
+            codeEl.innerHTML = currentPuzzle.codeTemplate.replace(
+                /___/g,
+                `<span class="px-2 py-0.5 rounded ${isCorrect ? 'bg-emerald-500/20 border border-emerald-400 text-emerald-300' : 'bg-red-500/20 border border-red-400 text-red-300'} font-bold">${currentPuzzle.answer}</span>`
+            );
+
+            // Calculate ELO Delta
+            const scoreVal = isCorrect ? (grade === 'inaccuracy' ? 0.75 : 1) : 0;
+            const eloDelta = calculateEloChange(state.elo, currentPuzzle.elo, scoreVal, grade === 'brilliant');
+            state.elo = Math.max(800, state.elo + eloDelta);
+            state.peakElo = Math.max(state.peakElo, state.elo);
+            state.eloHistory.push(state.elo);
+
+            // Show floating ELO delta in header
+            const deltaEl = document.getElementById('hudEloDelta');
+            deltaEl.textContent = eloDelta >= 0 ? `+${eloDelta}` : `${eloDelta}`;
+            deltaEl.className = `text-[11px] font-mono font-bold ${eloDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+            deltaEl.classList.remove('hidden');
+
+            // Update Spaced Repetition & Blunder Book
+            if (isCorrect) {
+                state.streak += 1;
+                if (grade === 'brilliant') state.brilliantCount += 1;
+                if (!state.solvedIds.includes(currentPuzzle.id)) {
+                    state.solvedIds.push(currentPuzzle.id);
+                }
+                state.cleanStreakPerCard[currentPuzzle.id] = (state.cleanStreakPerCard[currentPuzzle.id] || 0) + 1;
+                // Graduate out of Blunder Book if solved cleanly twice
+                if (state.cleanStreakPerCard[currentPuzzle.id] >= 2) {
+                    state.blunderIds = state.blunderIds.filter(id => id !== currentPuzzle.id);
+                }
+            } else {
+                state.streak = 0;
+                state.cleanStreakPerCard[currentPuzzle.id] = 0;
+                if (!state.blunderIds.includes(currentPuzzle.id)) {
+                    state.blunderIds.push(currentPuzzle.id);
+                }
+            }
+
+            // Style Chess Evaluation Drawer
+            const drawer = document.getElementById('evalDrawer');
+            const badgeCircle = document.getElementById('evalSymbolCircle');
+            const titleText = document.getElementById('evalTitleText');
+            const eloBadge = document.getElementById('evalEloChangeBadge');
+            const correctCodeBox = document.getElementById('evalCorrectCodeBox');
+            const expText = document.getElementById('evalExplanationText');
+
+            drawer.className = "rounded-2xl border-2 p-5 transition-all ";
+
+            if (grade === 'brilliant') {
+                playSound('brilliant');
+                spawnConfetti(38, ['#06b6d4', '#22d3ee', '#fbbf24']);
+                drawer.classList.add('bg-cyan-950/35', 'border-cyan-400/60');
+                badgeCircle.className = "w-14 h-14 rounded-2xl bg-cyan-400 text-gray-950 flex items-center justify-center font-mono font-black text-2xl shrink-0 shadow-lg shadow-cyan-400/30 badge-pop";
+                badgeCircle.textContent = "!!";
+                titleText.className = "font-black text-lg text-cyan-300";
+                titleText.textContent = "نقلة عبقرية (Brilliant Move)! كتبتها من ذاكرتك العضلية";
+                eloBadge.className = "font-mono text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300";
+                eloBadge.textContent = `+${eloDelta} ELO (شامل مكافأة !!)`;
+            } else if (grade === 'best') {
+                playSound('best');
+                spawnConfetti(20, ['#10b981', '#34d399']);
+                drawer.classList.add('bg-emerald-950/35', 'border-emerald-500/50');
+                badgeCircle.className = "w-14 h-14 rounded-2xl bg-emerald-500 text-gray-950 flex items-center justify-center font-mono font-black text-2xl shrink-0 shadow-lg badge-pop";
+                badgeCircle.textContent = "!";
+                titleText.className = "font-black text-lg text-emerald-300";
+                titleText.textContent = "أفضل نقلة (Best Move)!";
+                eloBadge.className = "font-mono text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300";
+                eloBadge.textContent = `+${eloDelta} ELO`;
+            } else if (grade === 'inaccuracy') {
+                playSound('best');
+                drawer.classList.add('bg-amber-950/35', 'border-amber-500/50');
+                badgeCircle.className = "w-14 h-14 rounded-2xl bg-amber-400 text-gray-950 flex items-center justify-center font-mono font-black text-2xl shrink-0 shadow-lg badge-pop";
+                badgeCircle.textContent = "?!";
+                titleText.className = "font-black text-lg text-amber-300";
+                titleText.textContent = "نقلة مقبولة بمساعدة التلميح (Inaccuracy)";
+                eloBadge.className = "font-mono text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300";
+                eloBadge.textContent = `${eloDelta >= 0 ? '+' : ''}${eloDelta} ELO`;
+            } else {
+                playSound('blunder');
+                const boardCard = document.getElementById('tacticalBoardCard');
+                boardCard.classList.add('shake-anim');
+                setTimeout(() => boardCard.classList.remove('shake-anim'), 380);
+
+                drawer.classList.add('bg-red-950/40', 'border-red-500/60');
+                badgeCircle.className = "w-14 h-14 rounded-2xl bg-red-500 text-white flex items-center justify-center font-mono font-black text-2xl shrink-0 shadow-lg badge-pop";
+                badgeCircle.textContent = "??";
+                titleText.className = "font-black text-lg text-red-400";
+                titleText.textContent = "بلندر (Blunder)! تمت إضافته لدفتر البلندرات للتكرار الذكي";
+                eloBadge.className = "font-mono text-xs font-black px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300";
+                eloBadge.textContent = `${eloDelta} ELO`;
+            }
+
+            correctCodeBox.textContent = currentMode === 'mate3'
+                ? currentPuzzle.orderTokens.join(' ')
+                : currentPuzzle.codeTemplate.replace(/___/g, currentPuzzle.answer);
+            expText.textContent = currentPuzzle.explanation;
+
+            updateBlunderBookmarkButton();
+            saveState();
+        }
+
+        function nextPuzzle() {
+            playSound('move');
+            loadPuzzleOnBoard();
+        }
+
+        /*************************************************************************
+         * 10. PUZZLE RUSH (3 MINUTES / 3 STRIKES BLITZ)
+         *************************************************************************/
+        function startPuzzleRush() {
+            rushActive = true;
+            rushScore = 0;
+            rushLives = 3;
+            rushSeconds = 180;
+
+            document.getElementById('rushHudBox').classList.remove('hidden');
+            document.getElementById('rushHudBox').classList.add('flex');
+            document.getElementById('normalStreakBox').classList.add('hidden');
+            updateRushHUD();
+
+            if (rushInterval) clearInterval(rushInterval);
+            rushInterval = setInterval(() => {
+                rushSeconds--;
+                updateRushHUD();
+                if (rushSeconds <= 0) {
+                    endPuzzleRush("انتهى وقت الـ 3 دقائق!");
+                }
+            }, 1000);
+
+            loadPuzzleOnBoard();
+        }
+
+        function updateRushHUD() {
+            const mins = String(Math.floor(rushSeconds / 60)).padStart(2, '0');
+            const secs = String(rushSeconds % 60).padStart(2, '0');
+            document.getElementById('rushTimerDisplay').textContent = `${mins}:${secs}`;
+            document.getElementById('rushScoreDisplay').textContent = rushScore;
+
+            let heartsHtml = '';
+            for (let i = 0; i < 3; i++) {
+                heartsHtml += `<i class="fa-solid fa-heart ${i < rushLives ? 'text-red-500' : 'text-gray-700'}"></i>`;
+            }
+            document.getElementById('rushLivesDisplay').innerHTML = heartsHtml;
+        }
+
+        function handleRushMove(isCorrect) {
+            if (isCorrect) {
+                playSound('best');
+                rushScore++;
+                if (rushScore > state.rushBest) state.rushBest = rushScore;
+                spawnConfetti(14);
+                saveState();
+                updateRushHUD();
+                loadPuzzleOnBoard();
+            } else {
+                playSound('blunder');
+                rushLives--;
+                if (!state.blunderIds.includes(currentPuzzle.id)) {
+                    state.blunderIds.push(currentPuzzle.id);
+                }
+                const boardCard = document.getElementById('tacticalBoardCard');
+                boardCard.classList.add('shake-anim');
+                setTimeout(() => boardCard.classList.remove('shake-anim'), 350);
+                saveState();
+                updateRushHUD();
+                if (rushLives <= 0) {
+                    endPuzzleRush("ارتكبت 3 بلندرات (3 Strikes)!");
+                } else {
+                    loadPuzzleOnBoard();
+                }
+            }
+        }
+
+        function endPuzzleRush(reasonText) {
+            rushActive = false;
+            if (rushInterval) clearInterval(rushInterval);
+            document.getElementById('rushEndReason').textContent = reasonText;
+            document.getElementById('rushModalScore').textContent = rushScore;
+            document.getElementById('rushModalBest').textContent = state.rushBest;
+            document.getElementById('rushSummaryModal').classList.remove('hidden');
+            document.getElementById('rushSummaryModal').classList.add('flex');
+            spawnConfetti(40);
+        }
+
+        function restartPuzzleRush() {
+            document.getElementById('rushSummaryModal').classList.add('hidden');
+            document.getElementById('rushSummaryModal').classList.remove('flex');
+            startPuzzleRush();
+        }
+
+        function closeRushModalToTactics() {
+            document.getElementById('rushSummaryModal').classList.add('hidden');
+            document.getElementById('rushSummaryModal').classList.remove('flex');
+            switchMode('tactics');
+        }
+
+        /*************************************************************************
+         * 11. TECHNICAL INTERVIEW BOSS FIGHT ENGINE
+         *************************************************************************/
+        function renderInterviewLobby() {
+            const grid = document.getElementById('interviewTracksGrid');
+            grid.innerHTML = '';
+
+            INTERVIEW_TRACKS.forEach(track => {
+                const passed = state.passedInterviews.includes(track.id);
+                grid.innerHTML += `
+                    <div class="bg-gm-panel border ${passed ? 'border-emerald-500/50' : 'border-gray-800'} rounded-2xl p-6 flex flex-col justify-between gap-4 shadow-xl">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    Recommended ELO: ${track.eloReq}+
+                                </span>
+                                ${passed ? '<span class="text-xs font-bold bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full">✅ Strong Hire</span>' : ''}
+                            </div>
+                            <h3 class="text-lg font-black text-white flex items-center gap-2">
+                                <i class="fa-solid ${track.icon} text-amber-400"></i>
+                                <span>${track.title}</span>
+                            </h3>
+                            <p class="text-xs font-mono text-cyan-400 mt-0.5">${track.company}</p>
+                            <p class="text-xs text-gray-300 mt-3 leading-relaxed">${track.desc}</p>
+                        </div>
+
+                        <button onclick="startInterviewTrack('${track.id}')" class="btn-tactical w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-gray-950 font-black text-sm shadow-lg flex items-center justify-center gap-2">
+                            <span>بدء المقابلة التقنية</span>
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function startInterviewTrack(trackId) {
+            playSound('move');
+            activeInterview = INTERVIEW_TRACKS.find(t => t.id === trackId);
+            ivStageIdx = 0;
+            ivResults = [];
+
+            if (activeInterview.puzzleIds === "random_5") {
+                ivPuzzles = [...PUZZLE_BANK].sort((a, b) => a.elo - b.elo);
+                // Pick 5 progressively harder puzzles
+                const step = Math.floor(ivPuzzles.length / 5);
+                ivPuzzles = [0, 1, 2, 3, 4].map(i => ivPuzzles[Math.min(ivPuzzles.length - 1, i * step + Math.floor(Math.random() * step))]);
+            } else {
+                ivPuzzles = activeInterview.puzzleIds.map(pid => PUZZLE_BANK.find(p => p.id === pid));
+            }
+
+            document.getElementById('interviewLobby').classList.add('hidden');
+            document.getElementById('interviewReportCard').classList.add('hidden');
+            document.getElementById('interviewActiveStage').classList.remove('hidden');
+            document.getElementById('interviewActiveStage').classList.add('flex');
+
+            loadInterviewStage();
+        }
+
+        function loadInterviewStage() {
+            const p = ivPuzzles[ivStageIdx];
+            document.getElementById('ivTitleHeader').textContent = activeInterview.title;
+            document.getElementById('ivStageCounter').textContent = `Stage ${ivStageIdx + 1} / ${ivPuzzles.length}`;
+            document.getElementById('ivStageTopicBadge').textContent = `${p.badge} • ELO ${p.elo}`;
+            document.getElementById('ivQuestionScenario').textContent = p.scenario;
+            document.getElementById('ivIoPreview').textContent = p.ioPreview;
+            document.getElementById('ivCodeTemplate').innerHTML = p.codeTemplate.replace(
+                /___/g,
+                `<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400 text-amber-300 font-bold">???</span>`
+            );
+
+            const input = document.getElementById('ivUserInput');
+            input.value = '';
+            setTimeout(() => input.focus(), 50);
+
+            const grid = document.getElementById('ivOptionsGrid');
+            grid.innerHTML = '';
+            [...p.options].sort(() => Math.random() - 0.5).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-tactical p-3.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-700 hover:border-amber-400 font-mono text-sm text-white text-left transition";
+                btn.textContent = opt;
+                btn.onclick = () => recordInterviewAnswer(opt, false);
+                grid.appendChild(btn);
+            });
+
+            // Start 90s stage timer
+            ivTimerSeconds = 90;
+            updateIvTimerDisplay();
+            if (ivTimerInterval) clearInterval(ivTimerInterval);
+            ivTimerInterval = setInterval(() => {
+                ivTimerSeconds--;
+                updateIvTimerDisplay();
+                if (ivTimerSeconds <= 0) {
+                    recordInterviewAnswer("TIMEOUT", false);
+                }
+            }, 1000);
+        }
+
+        function updateIvTimerDisplay() {
+            const m = String(Math.floor(ivTimerSeconds / 60)).padStart(2, '0');
+            const s = String(ivTimerSeconds % 60).padStart(2, '0');
+            document.getElementById('ivStageTimer').textContent = `${m}:${s}`;
+        }
+
+        function submitInterviewStageTyped() {
+            const val = document.getElementById('ivUserInput').value.trim();
+            if (!val) return;
+            recordInterviewAnswer(val, true);
+        }
+
+        function recordInterviewAnswer(userAns, typedManually) {
+            if (ivTimerInterval) clearInterval(ivTimerInterval);
+            const p = ivPuzzles[ivStageIdx];
+            const correct = isAnswerMatch(userAns, p);
+
+            if (correct) {
+                playSound(typedManually ? 'brilliant' : 'best');
+            } else {
+                playSound('blunder');
+                if (!state.blunderIds.includes(p.id)) state.blunderIds.push(p.id);
+            }
+
+            ivResults.push({
+                puzzle: p,
+                userAns,
+                correct,
+                typedManually
+            });
+
+            ivStageIdx++;
+            if (ivStageIdx < ivPuzzles.length) {
+                loadInterviewStage();
+            } else {
+                finishInterviewReport();
+            }
+        }
+
+        function finishInterviewReport() {
+            document.getElementById('interviewActiveStage').classList.add('hidden');
+            document.getElementById('interviewActiveStage').classList.remove('flex');
+
+            const reportEl = document.getElementById('interviewReportCard');
+            reportEl.classList.remove('hidden');
+            reportEl.classList.add('flex');
+
+            const total = ivResults.length;
+            const correctCount = ivResults.filter(r => r.correct).length;
+            const pct = Math.round((correctCount / total) * 100);
+
+            let decisionBadge = "";
+            let decisionColor = "";
+            let eloBonus = 0;
+
+            if (pct === 100) {
+                decisionBadge = "STRONG HIRE 🚀 (اجتياز كامل)";
+                decisionColor = "text-cyan-400 bg-cyan-500/20 border-cyan-500/40";
+                eloBonus = 35;
+                spawnConfetti(50);
+                if (!state.passedInterviews.includes(activeInterview.id)) {
+                    state.passedInterviews.push(activeInterview.id);
+                }
+            } else if (pct >= 75) {
+                decisionBadge = "HIRE ✅ (مقبول تقنياً)";
+                decisionColor = "text-emerald-400 bg-emerald-500/20 border-emerald-500/40";
+                eloBonus = 18;
+                spawnConfetti(25);
+                if (!state.passedInterviews.includes(activeInterview.id)) {
+                    state.passedInterviews.push(activeInterview.id);
+                }
+            } else {
+                decisionBadge = "NEEDS PRACTICE ⚠️ (راجع البلندرات وأعد المحاولة)";
+                decisionColor = "text-red-400 bg-red-500/20 border-red-500/40";
+                eloBonus = -12;
+            }
+
+            state.elo = Math.max(800, state.elo + eloBonus);
+            state.peakElo = Math.max(state.peakElo, state.elo);
+            state.eloHistory.push(state.elo);
+            saveState();
+
+            let breakdownHtml = '';
+            ivResults.forEach((r, idx) => {
+                breakdownHtml += `
+                    <div class="bg-gray-950 border ${r.correct ? 'border-emerald-500/40' : 'border-red-500/40'} rounded-xl p-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-gray-400">Stage ${idx + 1}: ${r.puzzle.badge}</span>
+                            <span class="text-xs font-mono font-black px-2 py-0.5 rounded ${r.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-400'}">
+                                ${r.correct ? (r.typedManually ? '!! Brilliant' : '! Correct') : '?? Blunder'}
+                            </span>
+                        </div>
+                        <p class="text-xs font-bold text-white">${r.puzzle.scenario}</p>
+                        <div class="code-dir text-xs font-mono text-cyan-300 bg-black/50 p-2 rounded border border-gray-800">
+                            الحل الصحيح: ${r.puzzle.answer} (إجابتك: ${r.userAns})
+                        </div>
+                        <p class="text-xs text-gray-400">💡 ${r.puzzle.explanation}</p>
+                    </div>
+                `;
+            });
+
+            reportEl.innerHTML = `
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-5">
+                    <div>
+                        <span class="text-xs font-mono text-amber-400">${activeInterview.company}</span>
+                        <h3 class="text-2xl font-black text-white mt-1">تقرير لجنة التحكيم: ${activeInterview.title}</h3>
+                    </div>
+                    <div class="px-4 py-2 rounded-xl border font-black text-sm ${decisionColor}">
+                        ${decisionBadge} (${correctCount}/${total} • ${eloBonus >= 0 ? '+' : ''}${eloBonus} ELO)
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <h4 class="text-sm font-bold text-gray-300">تحليل إجاباتك الهندسية في كل مرحلة:</h4>
+                    <div class="grid grid-cols-1 gap-3">${breakdownHtml}</div>
+                </div>
+
+                <div class="flex flex-wrap gap-3 pt-2">
+                    <button onclick="startInterviewTrack('${activeInterview.id}')" class="px-6 py-3 rounded-xl bg-amber-400 text-gray-950 font-black text-sm">
+                        إعادة الإنترفيو 🔄
+                    </button>
+                    <button onclick="quitInterviewToLobby()" class="px-6 py-3 rounded-xl bg-gray-800 text-white font-bold text-sm">
+                        العودة لقائمة الإنترفيوهات
+                    </button>
+                </div>
+            `;
+        }
+
+        function quitInterviewToLobby() {
+            if (ivTimerInterval) clearInterval(ivTimerInterval);
+            document.getElementById('interviewActiveStage').classList.add('hidden');
+            document.getElementById('interviewActiveStage').classList.remove('flex');
+            document.getElementById('interviewReportCard').classList.add('hidden');
+            document.getElementById('interviewLobby').classList.remove('hidden');
+            renderInterviewLobby();
+        }
+
+        /*************************************************************************
+         * 12. NAVIGATION, TOPIC PILLS & BLUNDER VAULT
+         *************************************************************************/
+        function switchMode(mode) {
+            playSound('move');
+            if (rushInterval) {
+                clearInterval(rushInterval);
+                rushActive = false;
+            }
+            if (ivTimerInterval) clearInterval(ivTimerInterval);
+
+            currentMode = mode;
+
+            // Highlight active mode tab
+            ['tactics', 'rush', 'mate3', 'interview', 'vault'].forEach(m => {
+                const tab = document.getElementById(`tab_${m}`);
+                if (m === mode) {
+                    tab.className = "mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-cyan-500 text-gray-950 shadow-lg shadow-cyan-500/20 transition";
+                } else {
+                    tab.className = "mode-tab px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800 transition";
+                }
+            });
+
+            const viewBoard = document.getElementById('viewBoard');
+            const viewInterview = document.getElementById('viewInterview');
+            const viewVault = document.getElementById('viewVault');
+            const topicBar = document.getElementById('topicFilterBar');
+
+            document.getElementById('rushHudBox').classList.add('hidden');
+            document.getElementById('rushHudBox').classList.remove('flex');
+            document.getElementById('normalStreakBox').classList.remove('hidden');
+
+            if (mode === 'interview') {
+                viewBoard.classList.add('hidden');
+                viewVault.classList.add('hidden');
+                topicBar.classList.add('hidden');
+                viewInterview.classList.remove('hidden');
+                viewInterview.classList.add('flex');
+                quitInterviewToLobby();
+            } else if (mode === 'vault') {
+                viewBoard.classList.add('hidden');
+                viewInterview.classList.add('hidden');
+                topicBar.classList.remove('hidden');
+                viewVault.classList.remove('hidden');
+                viewVault.classList.add('flex');
+                renderVault();
+            } else {
+                viewInterview.classList.add('hidden');
+                viewVault.classList.add('hidden');
+                topicBar.classList.remove('hidden');
+                viewBoard.classList.remove('hidden');
+
+                if (mode === 'rush') {
+                    startPuzzleRush();
+                } else {
+                    loadPuzzleOnBoard();
+                }
+            }
+        }
+
+        function selectTopic(topic) {
+            playSound('move');
+            currentTopic = topic;
+            document.querySelectorAll('.topic-pill').forEach(btn => {
+                if (btn.dataset.topic === topic) {
+                    btn.className = "topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/60 transition";
+                } else {
+                    btn.className = "topic-pill px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-600 transition";
+                }
+            });
+
+            if (currentMode === 'vault') {
+                renderVault();
+            } else if (currentMode !== 'interview') {
+                loadPuzzleOnBoard();
+            }
+        }
+
+        function toggleBlunderBookmark() {
+            if (!currentPuzzle) return;
+            playSound('move');
+            const idx = state.blunderIds.indexOf(currentPuzzle.id);
+            if (idx === -1) {
+                state.blunderIds.push(currentPuzzle.id);
+                showToast("تمت إضافة التكتيك إلى دفتر البلندرات للمراجعة المركزة 📕");
+            } else {
+                state.blunderIds.splice(idx, 1);
+                showToast("تمت إزالة التكتيك من دفتر البلندرات ✅");
+            }
+            updateBlunderBookmarkButton();
+            saveState();
+        }
+
+        function updateBlunderBookmarkButton() {
+            const btn = document.getElementById('btnBlunderBookmark');
+            const inBlunders = currentPuzzle && state.blunderIds.includes(currentPuzzle.id);
+            if (inBlunders) {
+                btn.className = "p-2.5 rounded-xl bg-red-500/20 border border-red-500 text-red-400 transition shrink-0";
+                btn.innerHTML = '<i class="fa-solid fa-bookmark"></i>';
+            } else {
+                btn.className = "p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-red-400 transition shrink-0";
+                btn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+            }
+        }
+
+        function renderVault() {
+            const query = document.getElementById('vaultSearchInput').value.trim().toLowerCase();
+            const status = document.getElementById('vaultFilterSelect').value;
+            const grid = document.getElementById('vaultCardsGrid');
+            grid.innerHTML = '';
+
+            const list = PUZZLE_BANK.filter(p => {
+                if (currentTopic !== 'all' && currentTopic !== 'blunders' && p.topic !== currentTopic) return false;
+                if (currentTopic === 'blunders' && !state.blunderIds.includes(p.id)) return false;
+
+                if (status === 'blunders' && !state.blunderIds.includes(p.id)) return false;
+                if (status === 'solved' && !state.solvedIds.includes(p.id)) return false;
+                if (status === 'unsolved' && state.solvedIds.includes(p.id)) return false;
+
+                if (query) {
+                    const hay = `${p.badge} ${p.motif} ${p.scenario} ${p.codeTemplate} ${p.answer} ${p.explanation}`.toLowerCase();
+                    if (!hay.includes(query)) return false;
+                }
+                return true;
+            });
+
+            if (list.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-2 text-center py-12 text-gray-400">
+                        <i class="fa-solid fa-chess-board text-3xl mb-2 text-gray-600"></i>
+                        <p>لا توجد تكتيكات مطابقة للبحث أو الفلتر الحالي.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.forEach(p => {
+                const isBlunder = state.blunderIds.includes(p.id);
+                const isSolved = state.solvedIds.includes(p.id);
+                const fullCode = p.codeTemplate.replace(/___/g, `<span class="text-cyan-300 font-bold underline">${p.answer}</span>`);
+
+                grid.innerHTML += `
+                    <div class="bg-gray-950/90 border ${isBlunder ? 'border-red-500/50' : 'border-gray-800'} rounded-2xl p-5 flex flex-col justify-between gap-3">
+                        <div class="space-y-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/15 text-amber-300">ELO ${p.elo}</span>
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-500/15 text-cyan-300">${p.badge}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    ${isBlunder ? '<span class="text-[11px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-bold">?? Blunder</span>' : ''}
+                                    ${isSolved ? '<span class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">! Solved</span>' : ''}
+                                </div>
+                            </div>
+                            <div class="text-xs font-bold text-purple-300">${p.motif}</div>
+                            <h4 class="font-bold text-sm text-white leading-relaxed">${p.scenario}</h4>
+                            <pre class="code-dir bg-black/70 border border-gray-800 rounded-xl p-3 text-xs text-gray-200 overflow-x-auto whitespace-pre-wrap">${fullCode}</pre>
+                        </div>
+                        <div class="space-y-3 border-t border-gray-800/80 pt-3">
+                            <p class="text-xs text-gray-400 leading-relaxed">💡 ${p.explanation}</p>
+                            <button onclick="practiceSpecificPuzzle('${p.id}')" class="w-full py-2 rounded-xl bg-gray-900 hover:bg-cyan-500 hover:text-gray-950 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition">
+                                تدرب على هذا التكتيك على الرقعة ♟️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function practiceSpecificPuzzle(puzzleId) {
+            const target = PUZZLE_BANK.find(p => p.id === puzzleId);
+            if (!target) return;
+            switchMode('tactics');
+            loadPuzzleOnBoard(target);
+        }
+
+        /*************************************************************************
+         * 13. MODALS, EXPORT TO GITHUB PAGES & KEYBOARD SHORTCUTS
+         *************************************************************************/
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-24', 'opacity-0'), 2800);
+        }
+
+        function openGithubModal() {
+            document.getElementById('githubModal').classList.remove('hidden');
+            document.getElementById('githubModal').classList.add('flex');
+        }
+
+        function closeGithubModal() {
+            document.getElementById('githubModal').classList.add('hidden');
+            document.getElementById('githubModal').classList.remove('flex');
+        }
+
+        function downloadStandaloneHTML() {
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "index.html";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("تم تحميل index.html جاهز للرفع على GitHub Pages! 🚀");
+        }
+
+        function resetAllProgress() {
+            state = {
+                elo: 1200,
+                peakElo: 1200,
+                eloHistory: [1200],
+                streak: 0,
+                brilliantCount: 0,
+                rushBest: 0,
+                solvedIds: [],
+                blunderIds: [],
+                cleanStreakPerCard: {},
+                passedInterviews: []
+            };
+            saveState();
+            loadPuzzleOnBoard();
+            showToast("تمت إعادة ضبط الـ ELO إلى 1200 وبدء موسم جديد ♟️");
+        }
+
+        // Global Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+
+            if (e.key === 'Enter') {
+                if (currentMode === 'tactics' || currentMode === 'rush') {
+                    e.preventDefault();
+                    submitTypedMove();
+                } else if (currentMode === 'mate3') {
+                    e.preventDefault();
+                    submitMate3Move();
+                } else if (currentMode === 'interview' && !document.getElementById('interviewActiveStage').classList.contains('hidden')) {
+                    e.preventDefault();
+                    submitInterviewStageTyped();
+                }
+            } else if (activeTag !== 'INPUT' && activeTag !== 'SELECT' && (currentMode === 'tactics' || currentMode === 'rush')) {
+                if (['1', '2', '3', '4'].includes(e.key) && !isPuzzleResolved) {
+                    const idx = parseInt(e.key, 10) - 1;
+                    const btns = document.getElementById('optionsGrid').querySelectorAll('button');
+                    if (btns[idx]) btns[idx].click();
+                } else if (e.key.toLowerCase() === 'h') {
+                    triggerHint();
+                }
+            }
+        });
+
+        window.onload = function () {
+            loadState();
+            updateGrandmasterHUD();
+            animateConfetti();
+            loadPuzzleOnBoard();
+        };
+    </script>
+</body>
+</html>
